@@ -1,89 +1,89 @@
 fecha,anio,mes,categoria,monto,estado,archivo,nota
-2024-10,2024,10,DIAN,52000,ok,Dian/2023/Comprobante.pdf,Pagado 22/10/2024 (carpeta 2023 = año gravable)
-2025-04,2025,4,Impuesto predial,500600,ok,Impuesto predial/Documento de Yoseth Rivera.pdf,Factura 23589650; existe un 2º PDF del mismo pago (no se duplica)
-2025-05,2025,5,Luz,199820,ok,Pago de recibos/Comparto 'comprobante_20250516T14_37_15' contigo.pdf,"Enel cliente 7774198, pagado 16/05/2025"
-2025-07,2025,7,Agua,312620,ok,Pago de recibos/agua julio.png,
-2025-07,2025,7,Claro,94160,ok,Pago de recibos/claro julio.png,
-2025-07,2025,7,Gas,125280,ok,Pago de recibos/gas julio 2025,
-2025-08,2025,8,Claro,94160,ok,Pago de recibos/claro pay agosto .png,
-2025-08,2025,8,Gas,162170,ok,Pago de recibos/gas agosto 2025.png,
-2025-08,2025,8,Luz,166210,ok,Pago de recibos/luz agosto 2025.png,Enel
-2025-09,2025,9,Agua,306270,ok,Pago de recibos/agua septiembre.png,
-2025-09,2025,9,Claro,94160,ok,Pago de recibos/claro septiembre.png,
-2025-09,2025,9,Gas,133850,ok,Pago de recibos/gas septiembre 2025.pdf,PDF escaneado (OCR)
-2025-10,2025,10,Gas,135210,ok,2025/gas octubre.png,
-2025-10,2025,10,Luz,243140,ok,Pago de recibos/Enel octubre 2025.png,Enel
-2025-11,2025,11,Agua,307010,ok,2025/agua noviembre.png,
-2025-11,2025,11,Claro,94160,ok,2025/claro noviembre.png,
-2025-11,2025,11,Luz,189600,ok,2025/luz noviembre.png,
-2025-12,2025,12,Claro,94160,ok,2025/claro diciembre.png,
+2024-10,2024,10,DIAN,52000.0,ok,Dian/2023/Comprobante.pdf,Pagado 22/10/2024 (carpeta 2023 = año gravable)
+2025-04,2025,4,Impuesto predial,500600.0,ok,Impuesto predial/Documento de Yoseth Rivera.pdf,Factura 23589650; existe un 2º PDF del mismo pago (no se duplica)
+2025-05,2025,5,Luz,199820.0,ok,Pago de recibos/Comparto 'comprobante_20250516T14_37_15' contigo.pdf,"Enel cliente 7774198, pagado 16/05/2025"
+2025-07,2025,7,Agua,312620.0,ok,Pago de recibos/agua julio.png,
+2025-07,2025,7,Claro,94160.0,ok,Pago de recibos/claro julio.png,
+2025-07,2025,7,Gas,125280.0,ok,Pago de recibos/gas julio 2025,
+2025-08,2025,8,Claro,94160.0,ok,Pago de recibos/claro pay agosto .png,
+2025-08,2025,8,Gas,162170.0,ok,Pago de recibos/gas agosto 2025.png,
+2025-08,2025,8,Luz,166210.0,ok,Pago de recibos/luz agosto 2025.png,Enel
+2025-09,2025,9,Agua,306270.0,ok,Pago de recibos/agua septiembre.png,
+2025-09,2025,9,Claro,94160.0,ok,Pago de recibos/claro septiembre.png,
+2025-09,2025,9,Gas,133850.0,ok,Pago de recibos/gas septiembre 2025.pdf,PDF escaneado (OCR)
+2025-10,2025,10,Gas,135210.0,ok,2025/gas octubre.png,
+2025-10,2025,10,Luz,243140.0,ok,Pago de recibos/Enel octubre 2025.png,Enel
+2025-11,2025,11,Agua,307010.0,ok,2025/agua noviembre.png,
+2025-11,2025,11,Claro,94160.0,ok,2025/claro noviembre.png,
+2025-11,2025,11,Luz,189600.0,ok,2025/luz noviembre.png,
+2025-12,2025,12,Claro,94160.0,ok,2025/claro diciembre.png,
 2025-12,2025,12,Cuota apto,391291.57,ok,2025/Apto diciembre,
-2025-12,2025,12,Gas,148690,ok,2025/Gas diciembre.pdf,PDF escaneado (OCR)
-2025-12,2025,12,Luz,190230,ok,2025/Luz diciembre,
+2025-12,2025,12,Gas,148690.0,ok,2025/Gas diciembre.pdf,PDF escaneado (OCR)
+2025-12,2025,12,Luz,190230.0,ok,2025/Luz diciembre,
 2026-01,2026,1,Administración,,faltante,(sin archivo),No hay comprobante en Drive
-2026-01,2026,1,Agua,292380,ok,2026/agua enero.png,
-2026-01,2026,1,Claro,94160,ok,2026/Claro Enero.png,
+2026-01,2026,1,Agua,292380.0,ok,2026/agua enero.png,
+2026-01,2026,1,Claro,94160.0,ok,2026/Claro Enero.png,
 2026-01,2026,1,Cuota apto,391361.12,ok,2026/Cuotas apto/01,
-2026-01,2026,1,Gas,113750,ok,2026/gas enero.png,
-2026-01,2026,1,Libranza,495640,ok,Libranza/01,Compensar Crédito Bancor
-2026-01,2026,1,Luz,161930,ok,2026/luz enero,
+2026-01,2026,1,Gas,113750.0,ok,2026/gas enero.png,
+2026-01,2026,1,Libranza,495640.0,ok,Libranza/01,Compensar Crédito Bancor
+2026-01,2026,1,Luz,161930.0,ok,2026/luz enero,
 2026-02,2026,2,Administración,,faltante,(sin archivo),No hay comprobante en Drive
-2026-02,2026,2,Claro,105160,ok,2026/Claro febrero .png,
+2026-02,2026,2,Claro,105160.0,ok,2026/Claro febrero .png,
 2026-02,2026,2,Cuota apto,392183.83,ok,2026/Cuotas apto/02,
-2026-02,2026,2,Gas,100840,ok,2026/gas febrero .png,
-2026-02,2026,2,Libranza,495640,ok,Libranza/02,Compensar Crédito Bancor
-2026-02,2026,2,Luz,200760,ok,2026/luz febrero ,
+2026-02,2026,2,Gas,100840.0,ok,2026/gas febrero .png,
+2026-02,2026,2,Libranza,495640.0,ok,Libranza/02,Compensar Crédito Bancor
+2026-02,2026,2,Luz,200760.0,ok,2026/luz febrero ,
 2026-03,2026,3,Administración,,faltante,(sin archivo),No hay comprobante en Drive
 2026-03,2026,3,Agua,,faltante,2026/Agua marzo.png,Captura en blanco (solo encabezado Claro Pay)
 2026-03,2026,3,Claro,,faltante,2026/Claro marzo.png,Captura en blanco (solo encabezado Claro Pay)
 2026-03,2026,3,Cuota apto,394996.74,ok,2026/Cuotas apto/03,
 2026-03,2026,3,Gas,,faltante,2026/Gas marzo.png,Captura en blanco (solo encabezado Claro Pay)
-2026-03,2026,3,Libranza,495640,ok,Libranza/03,Compensar Crédito Bancor
+2026-03,2026,3,Libranza,495640.0,ok,Libranza/03,Compensar Crédito Bancor
 2026-03,2026,3,Luz,,faltante,(sin archivo),No hay comprobante en Drive
-2026-04,2026,4,Administración,300000,ok,Administración/2026/04,
-2026-04,2026,4,Claro,113397,ok,2026/Claro abril,
+2026-04,2026,4,Administración,300000.0,ok,Administración/2026/04,
+2026-04,2026,4,Claro,113397.0,ok,2026/Claro abril,
 2026-04,2026,4,Cuota apto,399072.89,ok,2026/Cuotas apto/04,
-2026-04,2026,4,Gas,96630,ok,2026/Gas abril,
-2026-04,2026,4,Impuesto predial,473400,ok,Impuesto predial/2026.pdf,
-2026-04,2026,4,Libranza,495640,ok,Libranza/04,Compensar Crédito Bancor
-2026-04,2026,4,Luz,184110,ok,2026/Luz abril,
-2026-05,2026,5,Administración,370000,ok,Administración/2026/05,
-2026-05,2026,5,Agua,272980,ok,2026/Agua mayo,
-2026-05,2026,5,Claro,116640,ok,2026/Claro mayo,
+2026-04,2026,4,Gas,96630.0,ok,2026/Gas abril,
+2026-04,2026,4,Impuesto predial,473400.0,ok,Impuesto predial/2026.pdf,
+2026-04,2026,4,Libranza,495640.0,ok,Libranza/04,Compensar Crédito Bancor
+2026-04,2026,4,Luz,184110.0,ok,2026/Luz abril,
+2026-05,2026,5,Administración,370000.0,ok,Administración/2026/05,
+2026-05,2026,5,Agua,272980.0,ok,2026/Agua mayo,
+2026-05,2026,5,Claro,116640.0,ok,2026/Claro mayo,
 2026-05,2026,5,Cuota apto,402644.64,ok,2026/Cuotas apto/05,
-2026-05,2026,5,Gas,111970,ok,2026/Gas mayo,
-2026-05,2026,5,Libranza,495640,ok,Libranza/05,Compensar Crédito Bancor
-2026-05,2026,5,Luz,183130,ok,2026/Luz Mayo,
+2026-05,2026,5,Gas,111970.0,ok,2026/Gas mayo,
+2026-05,2026,5,Libranza,495640.0,ok,Libranza/05,Compensar Crédito Bancor
+2026-05,2026,5,Luz,183130.0,ok,2026/Luz Mayo,
 2026-06,2026,6,Administración,,faltante,(sin archivo),No hay comprobante en Drive
-2026-06,2026,6,Claro,116640,ok,2026/Claro junio,
-2026-06,2026,6,Cuota apto,405330,ok,2026/Cuotas apto/06,
-2026-06,2026,6,Gas,102280,ok,2026/Gas junio.pdf,PDF escaneado (OCR)
-2026-06,2026,6,Libranza,495566,ok,Libranza/06,Compensar Crédito Bancor
-2026-06,2026,6,Luz,193550,ok,2026/Luz junio,
-2026-07,2026,7,Administración,102500,ok,Administración/2026/07,
-2026-07,2026,7,Agua,311630,ok,2026/Agua julio,
-2026-07,2026,7,Claro,110900,ok,2026/Claro julio,
-2026-07,2026,7,Cuota apto,407586,ok,2026/Cuotas apto/07,
-2026-07,2026,7,Gas,103840,ok,2026/Gas julio,
-2026-07,2026,7,Libranza,495640,ok,Libranza/07,Compensar Crédito Bancor
-2026-07,2026,7,Luz,196670,ok,2026/Luz julio,
-2026-08,2026,8,Administración,122000,ok,Administración/2026/08,
-2026-08,2026,8,Claro,105160,ok,2026/Claro Agosto.png,
-2026-08,2026,8,Cuota apto,409193,ok,2026/Cuotas apto/08,
-2026-08,2026,8,Gas,93030,ok,2026/Gas Agosto.pdf,PDF escaneado (OCR)
-2026-08,2026,8,Libranza,495640,ok,Libranza/08,Compensar Crédito Bancor
-2026-08,2026,8,Luz,251190,ok,2026/Luz Agosto,PDF escaneado (OCR)
-2026-09,2026,9,Administración,122000,ok,Administración/2026/09,
-2026-09,2026,9,Agua,225670,ok,2026/Agua septiembre,
-2026-09,2026,9,Claro,110900,ok,2026/Claro septiembre,
-2026-09,2026,9,Cuota apto,410177,ok,2026/Cuotas apto/09,
-2026-09,2026,9,Gas,79980,ok,2026/Gas septiembre,
-2026-09,2026,9,Libranza,495640,ok,Libranza/Invoice_170191597.PDF,Compensar Crédito Bancor (archivo sin renombrar)
-2026-09,2026,9,Luz,232900,ok,2026/Luz septiembre,
-2026-10,2026,10,Administración,122000,ok,Administración/2026/10,
-2026-10,2026,10,Claro,110900,ok,2026/Claro octubre,
-2026-10,2026,10,Cuota apto,411198,ok,2026/Cuotas apto/10,
-2026-10,2026,10,Gas,,faltante,2026/Gas octubre,"Es el mismo comprobante que 'Luz octubre' (PP-6F38A99C31EAF, $237.790); se cuenta una sola vez en Luz"
-2026-10,2026,10,Libranza,495640,ok,Libranza/10,Compensar Crédito Bancor
-2026-10,2026,10,Luz,237790,ok,2026/Luz octubre,Comprobante idéntico archivado también como Gas octubre
-2026-10,2026,10,Seguro moto,101408,ok,Seguro de moto/Octubre 2026.jpg,Finesa
+2026-06,2026,6,Claro,116640.0,ok,2026/Claro junio,
+2026-06,2026,6,Cuota apto,405330.0,ok,2026/Cuotas apto/06,
+2026-06,2026,6,Gas,102280.0,ok,2026/Gas junio.pdf,PDF escaneado (OCR)
+2026-06,2026,6,Libranza,495566.0,ok,Libranza/06,Compensar Crédito Bancor
+2026-06,2026,6,Luz,193550.0,ok,2026/Luz junio,
+2026-07,2026,7,Administración,102500.0,ok,Administración/2026/07,
+2026-07,2026,7,Agua,311630.0,ok,2026/Agua julio,
+2026-07,2026,7,Claro,110900.0,ok,2026/Claro julio,
+2026-07,2026,7,Cuota apto,407586.0,ok,2026/Cuotas apto/07,
+2026-07,2026,7,Gas,103840.0,ok,2026/Gas julio,
+2026-07,2026,7,Libranza,495640.0,ok,Libranza/07,Compensar Crédito Bancor
+2026-07,2026,7,Luz,196670.0,ok,2026/Luz julio,
+2026-08,2026,8,Administración,122000.0,ok,Administración/2026/08,
+2026-08,2026,8,Claro,105160.0,ok,2026/Claro Agosto.png,
+2026-08,2026,8,Cuota apto,409193.0,ok,2026/Cuotas apto/08,
+2026-08,2026,8,Gas,93030.0,ok,2026/Gas Agosto.pdf,PDF escaneado (OCR)
+2026-08,2026,8,Libranza,495640.0,ok,Libranza/08,Compensar Crédito Bancor
+2026-08,2026,8,Luz,251190.0,ok,2026/Luz Agosto,PDF escaneado (OCR)
+2026-09,2026,9,Administración,122000.0,ok,Administración/2026/09,
+2026-09,2026,9,Agua,225670.0,ok,2026/Agua septiembre,
+2026-09,2026,9,Claro,110900.0,ok,2026/Claro septiembre,
+2026-09,2026,9,Cuota apto,410177.0,ok,2026/Cuotas apto/09,
+2026-09,2026,9,Gas,79980.0,ok,2026/Gas septiembre,
+2026-09,2026,9,Libranza,495640.0,ok,Libranza/Invoice_170191597.PDF,Compensar Crédito Bancor (archivo sin renombrar)
+2026-09,2026,9,Luz,232900.0,ok,2026/Luz septiembre,
+2026-10,2026,10,Administración,122000.0,ok,Administración/2026/10,
+2026-10,2026,10,Claro,110900.0,ok,2026/Claro octubre,
+2026-10,2026,10,Cuota apto,411198.0,ok,2026/Cuotas apto/10,
+2026-10,2026,10,Gas,85010.0,ok,2026/Gas octubre.jpg,"Vanti Gas Natural De Bogotá, ref M22412464, pagado 05/10/2026 18:33 (antes era duplicado de Luz)"
+2026-10,2026,10,Libranza,495640.0,ok,Libranza/10,Compensar Crédito Bancor
+2026-10,2026,10,Luz,237790.0,ok,2026/Luz octubre,Comprobante Enel/Claro Pay $237.790 (ya no se trata como gas)
+2026-10,2026,10,Seguro moto,101408.0,ok,Seguro de moto/Octubre 2026.jpg,Finesa
