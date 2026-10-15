@@ -136,8 +136,12 @@ async function load(){
 }
 
 // ---------- app ----------
-function start(DATA){
+function start(ALL){
   document.getElementById('loading').remove();
+  const yearsAll=[...new Set(ALL.map(r=>String(r.anio)))].sort();
+  const yearDef=yearsAll[yearsAll.length-1];
+  const DATA=ALL.filter(r=>String(r.anio)===yearDef);
+  document.getElementById('sub').textContent='Año '+yearDef+' · solo el último año con datos · COP';
   const ok=DATA.filter(r=>r.monto!=='');
   const cats=[...new Set(DATA.map(r=>r.categoria))];
   const months=[...new Set(ok.map(r=>r.fecha))].sort();
@@ -181,16 +185,17 @@ function start(DATA){
     options:{maintainAspectRatio:false,plugins:{tooltip:tt,legend:leg},scales:{y:{ticks:{callback:fmtK}},x:{grid:{display:false}}}}}));
 
   // Payments
-  let fy='',fc='';
-  const years=[...new Set(DATA.map(r=>r.anio))].sort().reverse();
+  let fy=yearDef,fc='';
+  const years=yearsAll.slice().reverse();
   const cy=document.getElementById('cy'),cc=document.getElementById('cc');
   const chip=(v,t,on)=>`<button class="chip${on?' on':''}" data-v="${v}">${t}</button>`;
-  cy.innerHTML=chip('','Todos los años',1)+years.map(y=>chip(y,y)).join('');
+  cy.innerHTML=years.map(y=>chip(y,y,y===yearDef)).join('')+chip('','Todos los años');
   cc.innerHTML=chip('','Todas',1)+cats.map(c=>chip(c,(INI[c]||'')+' '+c)).join('');
   const bind=(el,set)=>el.onclick=e=>{const b=e.target.closest('.chip');if(!b)return;[...el.children].forEach(x=>x.classList.toggle('on',x===b));set(b.dataset.v);render();};
   bind(cy,v=>fy=v);bind(cc,v=>fc=v);
   function render(){
-    const r=DATA.filter(x=>(!fy||x.anio===fy)&&(!fc||x.categoria===fc)).sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.categoria.localeCompare(b.categoria));
+    const src=fy?ALL.filter(x=>String(x.anio)===fy):ALL;
+    const r=src.filter(x=>!fc||x.categoria===fc).sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.categoria.localeCompare(b.categoria));
     document.getElementById('ft').textContent=r.length+' registros · '+fmt(sum(r.filter(x=>x.monto!=='')));
     document.getElementById('list').innerHTML=r.map(x=>`<div class="pay"><div class="ic" style="background:${COL[x.categoria]}">${INI[x.categoria]||x.categoria[0]}</div>
       <div class="md"><div class="t">${x.categoria} · ${labL(x.fecha)}</div><div class="f">${x.archivo}</div>${x.nota?`<div class="n">${x.nota}</div>`:''}</div>
