@@ -59,10 +59,12 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 #lock button{width:100%;padding:12px;border:0;border-radius:12px;background:var(--ac);color:#fff;font-size:15px;font-weight:600}
 #lock .err{color:#ef4444;font-size:13px;min-height:18px;margin-top:8px}
 #loading{padding:40px;text-align:center;color:var(--mu)}
-/* toast */
-#toast{position:fixed;left:50%;transform:translate(-50%,16px);bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:8px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:13px;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;max-width:calc(100vw - 24px)}
+/* toast: above the bottom nav on mobile; corner on desktop so it misses the missing-receipts list */
+#toast{position:fixed;left:50%;right:auto;width:max-content;transform:translate(-50%,16px);bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:flex-start;gap:8px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:13px;line-height:1.35;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;max-width:min(420px,calc(100vw - 24px))}
 #toast.on{opacity:1;transform:translate(-50%,0)}
-#toast .material-symbols-rounded{color:#10b981;font-size:20px}
+#toast .material-symbols-rounded{color:#10b981;font-size:20px;flex:0 0 auto}
+#toast.warn .material-symbols-rounded{color:var(--warn)}
+#analisis p{margin:0;font-size:14px;line-height:1.5}
 /* desktop */
 @media (min-width:900px){
  body{padding-bottom:0}
@@ -73,6 +75,11 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
  .g2{display:grid;grid-template-columns:2fr 1fr;gap:12px}.g2>.card{margin:0}
  .ch{height:340px}
  #list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}#list .pay{margin:0}
+ /* Esquina superior derecha: el lado derecho del encabezado queda libre y no tapa la lista de faltantes. */
+ #toast{top:12px;bottom:auto;left:auto;right:16px;width:max-content;transform:translateY(-8px);max-width:min(360px,42vw)}
+ #toast.on{transform:translateY(0)}
+ #toast.corner-bottom{top:auto;bottom:20px;transform:translateY(16px)}
+ #toast.corner-bottom.on{transform:translateY(0)}
 }
 </style></head>
 <body>
@@ -89,6 +96,7 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
   <div class="dots" id="dots"></div>
   <div class="card"><h2>Por categoría</h2><div class="mini" id="mini"></div></div>
   <div class="card"><h2>Últimos 6 meses</h2><div class="ch" style="height:220px"><canvas id="spark"></canvas></div></div>
+  <div class="card" id="analisis"><h2><span class="material-symbols-rounded" style="font-size:18px">insights</span> Análisis</h2><p id="analisis-txt"></p></div>
   <div class="card note"><h2>Recibos faltantes o ilegibles</h2><ul id="ms"></ul></div>
  </section>
  <section id="graficas" class="view">
@@ -109,9 +117,86 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 <p style="color:var(--mu);font-size:13px;margin:6px 0 0">Ingresa la contraseña para ver el dashboard.</p>
 <input id="pw" type="password" autocomplete="current-password" placeholder="Contraseña" required>
 <button type="submit">Desbloquear</button><div class="err" id="perr"></div></form></div>
-<div id="toast" role="status"><span class="material-symbols-rounded">task_alt</span><span>Todos los pagos están al día</span></div>
+<div id="toast" role="status" aria-live="polite"><span class="material-symbols-rounded" id="tico">task_alt</span><span id="tmsg"></span></div>
 <script>
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MES_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+/* Mensuales todos los meses. Agua solo en meses impares. Predial (abril) y DIAN no entran en la alerta. */
+const MENSUAL=['Luz','Gas','Claro','Cuota apto','Administración','Libranza','Seguro moto'];
+function bogotaYM(){
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Bogota',year:'numeric',month:'numeric'}).formatToParts(new Date());
+  return {year:+p.find(x=>x.type==='year').value,month:+p.find(x=>x.type==='month').value};
+}
+function esperado(month){return month%2?['Agua',...MENSUAL]:MENSUAL.slice();}
+function listaEs(xs){if(xs.length<2)return xs.join('');if(xs.length===2)return xs[0]+' y '+xs[1];return xs.slice(0,-1).join(', ')+' y '+xs[xs.length-1];}
+function fmtPct(p){const r=Math.round(p*10)/10;return (Number.isInteger(r)?String(r):r.toFixed(1).replace('.',','))+'%';}
+function pagado(r){return r.monto!==''&&r.monto!=null;}
+function sumaCat(rows,fecha,cat){
+  const xs=rows.filter(r=>r.fecha===fecha&&r.categoria===cat&&pagado(r));
+  return xs.length?xs.reduce((s,r)=>s+Number(r.monto),0):null;
+}
+function textoAnalisis(DATA,yNow,mNow,fechaNow){
+  const enAnio=DATA.some(r=>String(r.anio)===String(yNow));
+  const cur=enAnio?DATA.filter(r=>r.fecha===fechaNow&&pagado(r)):[];
+  if(!cur.length) return 'Este mes todavía no hay pagos registrados. En luz tampoco hay un pago todavía.';
+  const byC={};
+  cur.forEach(r=>{byC[r.categoria]=(byC[r.categoria]||0)+Number(r.monto);});
+  let top=null,topA=-Infinity;
+  Object.entries(byC).forEach(([c,a])=>{if(a>topA){top=c;topA=a;}});
+  const parts=['Este mes el gasto más alto fue '+top+' ('+fmt(topA)+').'];
+  const luz=Object.prototype.hasOwnProperty.call(byC,'Luz')?byC.Luz:null;
+  const prevM=mNow-1;
+  const prev=prevM>=1?yNow+'-'+String(prevM).padStart(2,'0'):null;
+  const luzPrev=prev?sumaCat(DATA,prev,'Luz'):null;
+  if(luz==null) parts.push('En luz todavía no hay pago este mes.');
+  else if(!prev) parts.push('En luz pagaste '+fmt(luz)+'.');
+  else if(luzPrev==null) parts.push('En luz pagaste '+fmt(luz)+'. El mes pasado no hay pago de luz para comparar.');
+  else if(luz===luzPrev) parts.push('En luz pagaste '+fmt(luz)+', igual que el mes pasado.');
+  else if(!luzPrev) parts.push('En luz pagaste '+fmt(luz)+' (el mes pasado fue '+fmt(luzPrev)+').');
+  else{
+    const dir=luz>luzPrev?'más':'menos';
+    parts.push('En luz pagaste '+fmt(luz)+', '+fmtPct(Math.abs(luz-luzPrev)/luzPrev*100)+' '+dir+' que el mes pasado ('+fmt(luzPrev)+').');
+  }
+  if(prev){
+    const prevRows=DATA.filter(r=>r.fecha===prev&&pagado(r));
+    const totPrev=prevRows.reduce((s,r)=>s+Number(r.monto),0);
+    const totNow=cur.reduce((s,r)=>s+Number(r.monto),0);
+    if(prevRows.length&&totPrev>0){
+      if(totNow===totPrev) parts.push('En total, este mes va igual que el anterior ('+fmt(totNow)+').');
+      else{
+        const dir=totNow>totPrev?'más':'menos';
+        parts.push('En total van '+fmt(totNow)+', '+fmtPct(Math.abs(totNow-totPrev)/totPrev*100)+' '+dir+' que el mes pasado ('+fmt(totPrev)+').');
+      }
+    }
+  }
+  return parts.join(' ');
+}
+function overlaps(a,b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}
+function inkBox(el){
+  const range=document.createRange();
+  range.selectNodeContents(el);
+  const r=range.getBoundingClientRect();
+  return r;
+}
+function placeToast(toast){
+  toast.classList.remove('corner-bottom');
+  toast.style.top='';
+  toast.style.bottom='';
+  if(innerWidth<900) return;
+  const blockers=[
+    ...[...document.querySelectorAll('header h1,header p')].map(inkBox),
+    ...[...document.querySelectorAll('#nav button,#resumen .note,#analisis')].map(el=>el.getBoundingClientRect()),
+  ];
+  const hit=()=>{const r=toast.getBoundingClientRect();return blockers.some(b=>overlaps(r,b));};
+  if(!hit()) return;
+  toast.classList.add('corner-bottom');
+  if(!hit()) return;
+  const note=document.querySelector('#resumen .note');
+  if(!note) return;
+  const gap=toast.getBoundingClientRect().height+12;
+  toast.style.bottom='auto';
+  toast.style.top=Math.max(12, note.getBoundingClientRect().top-gap)+'px';
+}
 const fmt=v=>'$'+Math.round(v).toLocaleString('es-CO').replace(/,/g,'.');
 const fmtK=v=>v>=1e6?'$'+(v/1e6).toFixed(1).replace('.',',')+'M':'$'+Math.round(v/1e3)+'k';
 const lab=f=>MES[+f.slice(5)-1]+' '+f.slice(2,4);
@@ -211,9 +296,33 @@ function start(ALL){
   }
   render();
 
-  // toast (cada apertura/recarga)
+  // Alerta del mes calendario (America/Bogota) y análisis breve del mismo mes.
+  const {year:yNow,month:mNow}=bogotaYM();
+  const mesNombre=MES_L[mNow-1];
+  const fechaNow=yNow+'-'+String(mNow).padStart(2,'0');
+  const pagados=new Set(ALL.filter(r=>String(r.anio)===String(yNow)&&+r.mes===mNow&&pagado(r)).map(r=>r.categoria));
+  const esp=esperado(mNow);
+  const faltan=esp.filter(c=>!pagados.has(c));
   const toast=document.getElementById('toast');
+  const tmsg=document.getElementById('tmsg');
+  const tico=document.getElementById('tico');
+  if(!faltan.length){
+    tmsg.textContent='Todos los pagos de '+mesNombre+' están al día';
+    tico.textContent='task_alt';
+    toast.classList.remove('warn');
+  }else{
+    let msg='Faltan '+faltan.length+' de '+esp.length+' pagos de '+mesNombre;
+    if(faltan.length<=3) msg+=': '+listaEs(faltan);
+    tmsg.textContent=msg;
+    tico.textContent='warning';
+    toast.classList.add('warn');
+  }
+  document.getElementById('analisis-txt').textContent=textoAnalisis(DATA,yNow,mNow,fechaNow);
+
   toast.classList.add('on');
+  const fixToast=()=>placeToast(toast);
+  requestAnimationFrame(fixToast);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fixToast);
   setTimeout(()=>toast.classList.remove('on'),5000);
 
   // Tabs
