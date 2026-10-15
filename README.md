@@ -2,7 +2,7 @@
 
 Personal expense dashboard, packaged as a mobile-first progressive web app (PWA) in Spanish. It shows payment summaries, charts, and the payment list from `data.json`.
 
-The payment data is public by design (no password). Live site: https://wilfranr.github.io/gastos/
+The payment data is public by design (no password). GitHub Pages URL (branch `main`, folder `/`): https://wilfranr.github.io/gastos/
 
 ## Rebuild
 
