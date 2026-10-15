@@ -11,12 +11,15 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
 <title>Control de gastos · Yoseth</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{--bg:#f4f6fb;--card:#fff;--tx:#111827;--mu:#6b7280;--bd:#e5e7eb;--ac:#4f46e5;--ac2:#7c3aed;--warn:#b45309;--warnbg:#fff7ed;--nav:rgba(255,255,255,.92)}
 @media (prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#151b2e;--tx:#e5e7eb;--mu:#9ca3af;--bd:#252c44;--ac:#818cf8;--ac2:#a78bfa;--warn:#fbbf24;--warnbg:#2a2213;--nav:rgba(21,27,46,.92)}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.material-symbols-rounded{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;font-size:24px;vertical-align:-.2em;overflow:hidden}
 html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:10;background:linear-gradient(120deg,#4f46e5,#7c3aed);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
@@ -28,7 +31,7 @@ h2{font-size:15px;margin:0 0 10px}
 /* KPI swipe */
 .kpis{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;margin:0 -14px;padding-left:14px;padding-right:14px;scrollbar-width:none}
 .kpis::-webkit-scrollbar{display:none}
-.kpi{flex:0 0 78%;scroll-snap-align:start;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:0;margin:0}
+.kpi{flex:0 0 calc(50% - 5px);scroll-snap-align:start;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:0;margin:0}
 .kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;opacity:.85}.kpi .v{font-size:24px;font-weight:700;margin-top:6px}.kpi .s{font-size:12px;opacity:.85;margin-top:4px}
 .dots{display:flex;justify-content:center;gap:6px;margin:6px 0 12px}.dots i{width:6px;height:6px;border-radius:9px;background:var(--bd)}.dots i.on{background:var(--ac);width:16px}
 .ch{position:relative;height:300px}.ch.tall{height:360px}
@@ -56,6 +59,10 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 #lock button{width:100%;padding:12px;border:0;border-radius:12px;background:var(--ac);color:#fff;font-size:15px;font-weight:600}
 #lock .err{color:#ef4444;font-size:13px;min-height:18px;margin-top:8px}
 #loading{padding:40px;text-align:center;color:var(--mu)}
+/* toast */
+#toast{position:fixed;left:50%;transform:translate(-50%,16px);bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:8px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:13px;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;max-width:calc(100vw - 24px)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast .material-symbols-rounded{color:#10b981;font-size:20px}
 /* desktop */
 @media (min-width:900px){
  body{padding-bottom:0}
@@ -98,10 +105,11 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
   <div id="list"></div>
  </section>
 </main>
-<div id="lock"><form id="lf"><div style="font-size:40px">🔒</div><h2 style="font-size:18px;margin:8px 0 0">Datos protegidos</h2>
+<div id="lock"><form id="lf"><span class="material-symbols-rounded" style="font-size:40px;color:#4f46e5">lock</span><h2 style="font-size:18px;margin:8px 0 0">Datos protegidos</h2>
 <p style="color:var(--mu);font-size:13px;margin:6px 0 0">Ingresa la contraseña para ver el dashboard.</p>
 <input id="pw" type="password" autocomplete="current-password" placeholder="Contraseña" required>
 <button type="submit">Desbloquear</button><div class="err" id="perr"></div></form></div>
+<div id="toast" role="status"><span class="material-symbols-rounded">task_alt</span><span>Todos los pagos están al día</span></div>
 <script>
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const fmt=v=>'$'+Math.round(v).toLocaleString('es-CO').replace(/,/g,'.');
@@ -109,7 +117,7 @@ const fmtK=v=>v>=1e6?'$'+(v/1e6).toFixed(1).replace('.',',')+'M':'$'+Math.round(
 const lab=f=>MES[+f.slice(5)-1]+' '+f.slice(2,4);
 const labL=f=>MES[+f.slice(5)-1]+' '+f.slice(0,4);
 const COL={'Agua':'#0ea5e9','Luz':'#f59e0b','Gas':'#ef4444','Claro':'#64748b','Cuota apto':'#4f46e5','Administración':'#8b5cf6','Libranza':'#10b981','Impuesto predial':'#a16207','DIAN':'#0f766e','Seguro moto':'#ec4899'};
-const INI={'Agua':'💧','Luz':'💡','Gas':'🔥','Claro':'📶','Cuota apto':'🏠','Administración':'🏢','Libranza':'💳','Impuesto predial':'🏛️','DIAN':'🧾','Seguro moto':'🏍️'};
+const ICO={'Agua':'water_drop','Luz':'lightbulb','Gas':'local_fire_department','Claro':'signal_cellular_alt','Cuota apto':'apartment','Administración':'domain','Libranza':'credit_card','Impuesto predial':'account_balance','DIAN':'receipt_long','Seguro moto':'two_wheeler'};
 const dark=matchMedia('(prefers-color-scheme: dark)').matches;
 const params=new URLSearchParams(location.search);
 
@@ -162,7 +170,7 @@ function start(ALL){
   kp.innerHTML=K.map(k=>`<div class="card kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
   dots.innerHTML=K.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('');
   kp.addEventListener('scroll',()=>{const w=kp.firstElementChild.offsetWidth+10;const i=Math.round(kp.scrollLeft/w);[...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));},{passive:true});
-  document.getElementById('mini').innerHTML=cs.map(c=>`<div><span>${INI[c]||''} ${c}</span><b>${fmt(byC[c])}</b></div>`).join('');
+  document.getElementById('mini').innerHTML=cs.map(c=>`<div><span>${ICO[c]?`<span class="material-symbols-rounded" style="font-size:18px">${ICO[c]}</span> `:''}${c}</span><b>${fmt(byC[c])}</b></div>`).join('');
   document.getElementById('ms').innerHTML=DATA.filter(r=>r.monto==='').map(r=>`<li><b>${r.categoria} ${labL(r.fecha)}</b> — ${r.archivo}: ${r.nota}</li>`).join('')+
    '<li><b>Excluidos por ser de 2021:</b> “Agua enero.pdf” ($434.033) y “casa cuota 1.jpg” ($576.000); ~100 capturas antiguas (2019–2022) sin nombre descriptivo no se procesaron.</li>';
 
@@ -190,18 +198,23 @@ function start(ALL){
   const cy=document.getElementById('cy'),cc=document.getElementById('cc');
   const chip=(v,t,on)=>`<button class="chip${on?' on':''}" data-v="${v}">${t}</button>`;
   cy.innerHTML=years.map(y=>chip(y,y,y===yearDef)).join('')+chip('','Todos los años');
-  cc.innerHTML=chip('','Todas',1)+cats.map(c=>chip(c,(INI[c]||'')+' '+c)).join('');
+  cc.innerHTML=chip('','Todas',1)+cats.map(c=>chip(c,(ICO[c]?`<span class="material-symbols-rounded" style="font-size:16px">${ICO[c]}</span> `:'')+c)).join('');
   const bind=(el,set)=>el.onclick=e=>{const b=e.target.closest('.chip');if(!b)return;[...el.children].forEach(x=>x.classList.toggle('on',x===b));set(b.dataset.v);render();};
   bind(cy,v=>fy=v);bind(cc,v=>fc=v);
   function render(){
     const src=fy?ALL.filter(x=>String(x.anio)===fy):ALL;
     const r=src.filter(x=>!fc||x.categoria===fc).sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.categoria.localeCompare(b.categoria));
     document.getElementById('ft').textContent=r.length+' registros · '+fmt(sum(r.filter(x=>x.monto!=='')));
-    document.getElementById('list').innerHTML=r.map(x=>`<div class="pay"><div class="ic" style="background:${COL[x.categoria]}">${INI[x.categoria]||x.categoria[0]}</div>
+    document.getElementById('list').innerHTML=r.map(x=>`<div class="pay"><div class="ic" style="background:${COL[x.categoria]}">${ICO[x.categoria]?`<span class="material-symbols-rounded" style="font-size:22px">${ICO[x.categoria]}</span>`:x.categoria[0]}</div>
       <div class="md"><div class="t">${x.categoria} · ${labL(x.fecha)}</div><div class="f">${x.archivo}</div>${x.nota?`<div class="n">${x.nota}</div>`:''}</div>
       <div class="a ${x.monto===''?'miss':''}">${x.monto===''?'Faltante':fmt(x.monto)}</div></div>`).join('');
   }
   render();
+
+  // toast (cada apertura/recarga)
+  const toast=document.getElementById('toast');
+  toast.classList.add('on');
+  setTimeout(()=>toast.classList.remove('on'),5000);
 
   // Tabs
   const nav=document.getElementById('nav');
