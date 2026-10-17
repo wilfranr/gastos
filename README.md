@@ -23,3 +23,9 @@ python3 build.py
 ```
 
 A missing file (404) or an empty array leaves the Alimentación view on its empty state. The page does not change `data.json`.
+
+## App shell updates
+
+There is no service worker. Safari and the Home Screen icon can still keep an old `index.html` after a deploy, while `data.json` and `alimentacion.json` load fresh (`cache: 'no-store'`).
+
+`version.json` (`{"v":"..."}`) and the `APP_VERSION` constant in `index.html` must be the same string. Whenever `index.html` changes, bump both together (a timestamp or commit id is enough) before pushing. On load, when the tab becomes visible, and when the page is restored from the back-forward cache, the page fetches `version.json?t=<now>` with `cache: 'no-store'`. If `v` differs from `APP_VERSION`, it reloads once to `?v=<new version>`. A `sessionStorage` flag stops a reload loop if that request still returns the old HTML.
