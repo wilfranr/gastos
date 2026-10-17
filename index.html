@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)">
@@ -154,6 +157,26 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 <button type="submit">Desbloquear</button><div class="err" id="perr"></div></form></div>
 <div id="toast" role="status" aria-live="polite"><span class="material-symbols-rounded" id="tico">task_alt</span><span id="tmsg"></span></div>
 <script>
+/* Whenever index.html changes, bump APP_VERSION and version.json ("v") together. */
+const APP_VERSION='20261017-1';
+const VER_KEY='gastos-version-reload';
+async function checkAppVersion(){
+  try{
+    const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;
+    const data=await r.json();
+    const newV=data&&data.v!=null?String(data.v):'';
+    if(!newV||newV===APP_VERSION){try{sessionStorage.removeItem(VER_KEY);}catch(e){}return;}
+    let guard='';
+    try{guard=sessionStorage.getItem(VER_KEY)||'';}catch(e){}
+    if(guard===newV)return;
+    try{sessionStorage.setItem(VER_KEY,newV);}catch(e){}
+    location.replace(location.pathname+'?v='+encodeURIComponent(newV));
+  }catch(e){}
+}
+checkAppVersion();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkAppVersion();});
+window.addEventListener('pageshow',ev=>{if(ev.persisted)checkAppVersion();});
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MES_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 /* Mensuales todos los meses. Agua solo en meses impares. Predial (abril) y DIAN no entran en la alerta. */
