@@ -94,6 +94,12 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
  #toast.corner-bottom{top:auto;bottom:20px;transform:translateY(16px)}
  #toast.corner-bottom.on{transform:translateY(0)}
 }
+.fa h3{font-size:13px;margin:12px 0 6px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.fa h3:first-of-type{margin-top:4px}.fa ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.fa li{background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.4}.fa li b{font-weight:600}
+.fa .up{color:#dc2626;font-weight:600}.fa .dn{color:#16a34a;font-weight:600}.fa .st{font-size:12px;color:var(--mu);line-height:1.5}
+.fa .gt{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:10px 12px;border-radius:12px;border-left:3px solid #f97316;background:var(--bg);font-size:14px}.fa .gt b{font-size:16px;font-variant-numeric:tabular-nums}
+.fa .sub{font-size:12px;color:var(--mu)}
 </style></head>
 <body>
 <header><h1>Control de gastos y pagos</h1><p id="sub">Recibos de “Pago de recibos” · COP</p></header>
@@ -131,6 +137,8 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
    <div class="kpis two" id="food-kpis"></div>
    <div class="card"><h2 id="food-chart-title">Gasto mensual</h2><div class="ch" style="height:240px"><canvas id="foodbar"></canvas></div></div>
    <div class="chips" id="food-months"></div>
+   <div class="card" id="food-cats" hidden><h2>Por categoría</h2><div class="mini" id="food-cats-list"></div></div>
+   <div class="card fa" id="food-analisis" hidden></div>
    <div class="sum" id="food-sum"></div>
    <div id="food-list"></div>
   </div>
@@ -270,7 +278,8 @@ async function loadFood(){
       const anio=String(row.anio??fecha.slice(0,4));
       const mes=row.mes!=null?+row.mes:+fecha.slice(5,7);
       const periodo=row.periodo?String(row.periodo):anio+'-'+String(mes).padStart(2,'0');
-      return {fecha,anio,mes,periodo,comercio:row.comercio||'',total:Number(row.total),medio_pago:row.medio_pago||'',nota:row.nota||''};
+      const items=Array.isArray(row.items)?row.items.filter(i=>i&&i.categoria&&Number.isFinite(Number(i.subtotal))).map(i=>({categoria:String(i.categoria),producto:String(i.producto||''),cantidad:Number(i.cantidad)||0,unidad:String(i.unidad||''),precio_unit:(i.precio_unit===''||i.precio_unit==null)?null:Number(i.precio_unit),subtotal:Number(i.subtotal)})):[];
+      return {fecha,anio,mes,periodo,comercio:row.comercio||'',total:Number(row.total),medio_pago:row.medio_pago||'',nota:row.nota||'',items};
     });
   }catch(e){return [];}
 }
@@ -392,6 +401,10 @@ function start(ALL, FOOD){
     const sumEl=document.getElementById('food-sum');
     function renderList(){
       const src=(fm?rows.filter(r=>r.periodo===fm):rows).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.comercio.localeCompare(b.comercio,'es'));
+      const byCat={};src.forEach(r=>(r.items||[]).forEach(i=>{byCat[i.categoria]=(byCat[i.categoria]||0)+i.subtotal;}));
+      const catKeys=Object.keys(byCat).sort((a,b)=>byCat[b]-byCat[a]);const catTot=catKeys.reduce((s,k)=>s+byCat[k],0);
+      const catBox=document.getElementById('food-cats');catBox.hidden=!catKeys.length;
+      document.getElementById('food-cats-list').innerHTML=catKeys.map(k=>`<div><span>${esc(k)}</span><b>${fmt(byCat[k])} · ${(catTot?100*byCat[k]/catTot:0).toFixed(0)}%</b></div>`).join('');
       sumEl.textContent=src.length+' factura'+(src.length===1?'':'s')+' · '+fmt(src.reduce((s,r)=>s+r.total,0));
       listEl.innerHTML=src.map(r=>{
         const meta=esc(labDia(r.fecha))+(r.medio_pago?' · '+esc(r.medio_pago):'');
@@ -403,7 +416,63 @@ function start(ALL, FOOD){
     renderList();
     return chart;
   }
+
+  // ---------- Análisis comparativo de alimentación (por comercio, a partir de items) ----------
+  function foodAnalysis(FOOD){
+    const box=document.getElementById('food-analisis');if(!box)return;
+    try{
+    const withItems=FOOD.filter(r=>r.items&&r.items.length);
+    if(!withItems.length){box.hidden=true;return;}
+    const per=[...new Set(FOOD.map(r=>r.periodo))].sort().pop();
+    const mesN=p=>MES_L[+p.slice(5)-1];
+    const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+    const fmtU=v=>'$'+(Math.round(v*10)/10).toLocaleString('es-CO',{minimumFractionDigits:0,maximumFractionDigits:1});
+    const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\(.*?\)/g,' ').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+    const GROUPS=[[/^FRIJOL/,'Fríjol'],[/^DESODORANTE/,'Desodorantes'],[/^AZUCAR/,'Azúcar blanca'],[/^ARROZ DIANA/,'Arroz Diana (paca x25, precio efectivo/unidad)'],[/^LECHE EN POLV/,'Leche en polvo'],[/^CAFE EXCELSO/,'Café excelso'],[/^LENTEJA/,'Lentejas'],[/^SPAGHETTI/,'Spaghetti'],[/^FUSILLI/,'Fusilli'],[/^ATUN/,'Atún rallado'],[/^PAPEL HIGIEN/,'Papel higiénico'],[/^LAVALOZA/,'Lavaloza líquido'],[/^GALLETA SALTI|^GALLETAS SALT/,'Galletas saltín'],[/^SALSA PARA AD/,'Salsa para aderezar'],[/^SALSA DE PIM/,'Salsa de pimienta'],[/^AREPA CHOCLO|^AREPA DE CHOC/,'Arepa de choclo']];
+    const SKIP=/^(AJUSTE|IMPUESTO|BOLSA$)/;
+    const keyOf=p=>{const n=norm(p);for(const [re,l] of GROUPS)if(re.test(n))return [l,l];return [n,cap(n.toLowerCase())];};
+    const median=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+    const out=[];
+    const stores=[...new Set(FOOD.filter(r=>r.periodo===per).map(r=>r.comercio))];
+    stores.forEach(st=>{
+      const inv=withItems.filter(r=>r.comercio===st);
+      const months=[...new Set(inv.map(r=>r.periodo))].sort();
+      if(months.length<2||!months.includes(per))return;
+      const hist={};// key -> {label, m:{periodo:[unit]}}
+      inv.forEach(r=>{
+        const its=r.items.map(i=>({...i,n:norm(i.producto),extra:0}));
+        its.filter(i=>/^AJUSTE/.test(i.n)).forEach(a=>{const w=a.n.split(' ').filter(x=>x.length>3&&!/AJUSTE|PRECIO|PACA/.test(x));const t=its.find(i=>i!==a&&!/^AJUSTE/.test(i.n)&&w.some(x=>i.n.includes(x)));if(t)t.extra+=a.subtotal;});
+        its.forEach(i=>{
+          if(SKIP.test(i.n)||!(i.cantidad>0))return;
+          let u=(i.extra||i.precio_unit==null||!(i.precio_unit>0))?(i.subtotal+i.extra)/i.cantidad:i.precio_unit;
+          if(!(u>0))return;
+          const [k,l]=keyOf(i.producto);(hist[k]=hist[k]||{l,m:{}});(hist[k].m[r.periodo]=hist[k].m[r.periodo]||[]).push(u);
+        });
+      });
+      const ch=[],stable=[];
+      Object.values(hist).forEach(h=>{
+        const ps=Object.keys(h.m).sort();if(ps.length<2)return;
+        const vals=ps.map(p=>median(h.m[p]));const first=vals[0],last=vals[vals.length-1];
+        if(vals.every(v=>Math.abs(v-first)<0.05)){stable.push(h.l+' ('+fmtU(first)+')');return;}
+        const pct=(last-first)/first*100;
+        const path=ps.map((p,j)=>fmtU(vals[j])+' ('+mesN(p)+')').join(' → ');
+        ch.push({pct,html:`<li><b>${esc(h.l)}:</b> ${esc(path)} ${Math.abs(pct)<0.05?'<span class="sub">= sin cambio neto</span>':`<span class="${pct>0?'up':'dn'}">${pct>0?'▲':'▼'} ${pct>0?'+':'−'}${fmtPct(Math.abs(pct))}</span>`}</li>`});
+      });
+      if(!ch.length&&!stable.length)return;
+      ch.sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+      out.push(`<h3>Histórico ${esc(st)}: ${months.map(p=>cap(mesN(p))).join(' vs. ')}</h3>`+
+        (ch.length?`<div class="sub" style="margin:0 0 6px">Variación de precios</div><ul>${ch.map(c=>c.html).join('')}</ul>`:'')+
+        (stable.length?`<div class="sub" style="margin:8px 0 4px">Precios estables</div><div class="st">${esc(stable.join(' · '))}</div>`:''));
+    });
+    const invM=FOOD.filter(r=>r.periodo===per);
+    const desc=r=>{const c={};(r.items||[]).forEach(i=>{c[i.categoria]=(c[i.categoria]||0)+i.subtotal;});const k=Object.keys(c).sort((a,b)=>c[b]-c[a]).slice(0,2);return k.length?k.join(' y ').toLowerCase():(r.nota||'compra');};
+    const gt=invM.reduce((s,r)=>s+r.total,0);
+    out.push(`<h3>Consolidado de ${mesN(per)} ${per.slice(0,4)}</h3><ul>${invM.slice().sort((a,b)=>b.total-a.total).map(r=>`<li style="display:flex;justify-content:space-between;gap:8px"><span><b>${esc(r.comercio)}</b><br><span class="sub">${esc(labDia(r.fecha))} · ${esc(desc(r))}</span></span><b style="white-space:nowrap">${fmt(r.total)}</b></li>`).join('')}</ul><div class="gt"><span>Gran total del mes</span><b>${fmt(gt)}</b></div>`);
+    box.innerHTML=`<h2>Análisis comparativo</h2>`+out.join('');box.hidden=false;
+    }catch(e){box.hidden=true;}
+  }
   const foodChart=renderAlimentacion();
+  foodAnalysis(FOOD);
 
   // Alerta del mes calendario (America/Bogota) y análisis breve del mismo mes. Los recibos de alimentación no entran aquí.
   const {year:yNow,month:mNow}=bogotaYM();
