@@ -1,1 +1,1422 @@
-[]
+[
+ {
+  "fecha": "2026-07-04",
+  "anio": "2026",
+  "mes": 7,
+  "periodo": "2026-07",
+  "comercio": "Carnes Frías Mega Soacha",
+  "total": 389407,
+  "medio_pago": "",
+  "nota": "17 productos; ítems suman $377.964",
+  "items": [
+   {
+    "categoria": "Proteínas",
+    "producto": "TOCINO DE CERDO KG",
+    "cantidad": 0.99,
+    "unidad": "Kg",
+    "precio_unit": 14000,
+    "subtotal": 13860
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CHULETA DE CERDO VARIABLE",
+    "cantidad": 1.51,
+    "unidad": "Kg",
+    "precio_unit": 21000,
+    "subtotal": 31710
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "SALSA ROSADA SALSERIN X 500G",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 4700,
+    "subtotal": 4700
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "COSTILLA DE CERDO AHUMADA TIRA",
+    "cantidad": 2.76,
+    "unidad": "Kg",
+    "precio_unit": 24950,
+    "subtotal": 61976
+   },
+   {
+    "categoria": "Granos",
+    "producto": "YUCA PRECOCIDA SUPER X 1000G",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 6000,
+    "subtotal": 6000
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "COSTILLA DE RES ESPECIAL X KG",
+    "cantidad": 2.17,
+    "unidad": "Kg",
+    "precio_unit": 21000,
+    "subtotal": 41013
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CARNE ASAR X KG",
+    "cantidad": 1.96,
+    "unidad": "Kg",
+    "precio_unit": 29000,
+    "subtotal": 56840
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "LOMO CERDO CRUDO X KG",
+    "cantidad": 1.92,
+    "unidad": "Kg",
+    "precio_unit": 19000,
+    "subtotal": 36480
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "FILETE DE TILAPIA X KG",
+    "cantidad": 0.99,
+    "unidad": "Kg",
+    "precio_unit": 16500,
+    "subtotal": 16335
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CARNE DESMECHADA DE POLLO 500G",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 14500,
+    "subtotal": 14500
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CARNE DESMECHADA DE RES 500G",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 16500,
+    "subtotal": 16500
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "ESPINAZO DE CERDO ESPECIAL X KG",
+    "cantidad": 2,
+    "unidad": "Kg",
+    "precio_unit": 4000,
+    "subtotal": 8000
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "SALCHICHA AMERICANA MIXTA 1000G",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 33200,
+    "subtotal": 33200
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AREPA CHOCLO 5 UND X 220G",
+    "cantidad": 2,
+    "unidad": "PAQ",
+    "precio_unit": 2700,
+    "subtotal": 5400
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "GALLETA RIZADA X50 SANTA RITAS",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 8700,
+    "subtotal": 8700
+   },
+   {
+    "categoria": "Verduras/Frutas",
+    "producto": "CEBOLLA EN POLVO X 400G",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 11250,
+    "subtotal": 11250
+   },
+   {
+    "categoria": "Verduras/Frutas",
+    "producto": "PIMIENTA CAYENA ENTERA X 250G",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 11500,
+    "subtotal": 11500
+   }
+  ]
+ },
+ {
+  "fecha": "2026-07-04",
+  "anio": "2026",
+  "mes": 7,
+  "periodo": "2026-07",
+  "comercio": "D1",
+  "total": 270460,
+  "medio_pago": "Tarjeta",
+  "nota": "29 líneas, 51 artículos; Factura GXK9122948",
+  "items": [
+   {
+    "categoria": "Granos",
+    "producto": "AZUCAR BLANCA",
+    "cantidad": 3,
+    "unidad": "UN",
+    "precio_unit": 3300,
+    "subtotal": 9900
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "JABON NATURAL",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 5350,
+    "subtotal": 10700
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "AREQUIPE LATT",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 4700,
+    "subtotal": 4700
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "CERVEZA BAHIA",
+    "cantidad": 12,
+    "unidad": "UN",
+    "precio_unit": 1790,
+    "subtotal": 21480
+   },
+   {
+    "categoria": "Granos",
+    "producto": "SPAGHETTI DEL",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3990,
+    "subtotal": 3990
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "GALLETA SEMID",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6990,
+    "subtotal": 6990
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "GALLETA SALTI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6600,
+    "subtotal": 6600
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "CAFE EXCELSO",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 13850,
+    "subtotal": 27700
+   },
+   {
+    "categoria": "Granos",
+    "producto": "FUSILLI DELIZ",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3990,
+    "subtotal": 3990
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "BOLSA BLANCA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2350,
+    "subtotal": 2350
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "ESPIRAL ABRAS",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1900,
+    "subtotal": 1900
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "ESPONJA MULTI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1900,
+    "subtotal": 1900
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "MAQUINA AFEIT",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 9900,
+    "subtotal": 9900
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "DESODORANTE A",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 15900,
+    "subtotal": 15900
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "PANO REUTILIZ",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 7950,
+    "subtotal": 7950
+   },
+   {
+    "categoria": "Granos",
+    "producto": "FIDEO DORIA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2150,
+    "subtotal": 2150
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "DESODORANTE H",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6990,
+    "subtotal": 6990
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "DESODORANTE H",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6990,
+    "subtotal": 6990
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "DESODORANTE M",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6990,
+    "subtotal": 6990
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "LAVALOZA LIQU",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 6300,
+    "subtotal": 12600
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "SERVILLETA DO",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 4150,
+    "subtotal": 4150
+   },
+   {
+    "categoria": "Granos",
+    "producto": "FRIJOL ROJO",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3690,
+    "subtotal": 3690
+   },
+   {
+    "categoria": "Granos",
+    "producto": "LENTEJA EL ES",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2100,
+    "subtotal": 2100
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "SALSA PARA AD",
+    "cantidad": 3,
+    "unidad": "UN",
+    "precio_unit": 2750,
+    "subtotal": 8250
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "SALSA DE PIMI",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 2750,
+    "subtotal": 5500
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "LECHE EN POLV",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 21600,
+    "subtotal": 21600
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "VINO CABERNET",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 18500,
+    "subtotal": 18500
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "ATUN RALLADO",
+    "cantidad": 4,
+    "unidad": "UN",
+    "precio_unit": 3450,
+    "subtotal": 13800
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "PAPEL HIGIENI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 21200,
+    "subtotal": 21200
+   }
+  ]
+ },
+ {
+  "fecha": "2026-08-01",
+  "anio": "2026",
+  "mes": 8,
+  "periodo": "2026-08",
+  "comercio": "D1",
+  "total": 288660,
+  "medio_pago": "Tarjeta",
+  "nota": "33 líneas; incluye ajuste de precio -3.760 en arroz",
+  "items": [
+   {
+    "categoria": "Granos",
+    "producto": "ARROZ DIANA 5",
+    "cantidad": 25,
+    "unidad": "UN",
+    "precio_unit": 1990,
+    "subtotal": 49750
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AJUSTE PRECIO PACA DIANA X25",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": -3760,
+    "subtotal": -3760
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "PASABOCAS MIX",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 4650,
+    "subtotal": 4650
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "TOSTACOS PICA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6300,
+    "subtotal": 6300
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "PANO REUTILIZ",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 7950,
+    "subtotal": 7950
+   },
+   {
+    "categoria": "Granos",
+    "producto": "CALDO DESMENU",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3150,
+    "subtotal": 3150
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "SALSA PARA AD",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 2750,
+    "subtotal": 5500
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AREPA DE QUES",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 3250,
+    "subtotal": 6500
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AREPA DE CHOC",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 3250,
+    "subtotal": 6500
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "LECHE EN POLV",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 20900,
+    "subtotal": 41800
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "GALLETA SANDW",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 8500,
+    "subtotal": 8500
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "GALLETAS SALT",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 5600,
+    "subtotal": 5600
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "ATUN RALLADO",
+    "cantidad": 3,
+    "unidad": "UN",
+    "precio_unit": 3450,
+    "subtotal": 10350
+   },
+   {
+    "categoria": "Granos",
+    "producto": "CLAVO ENTERO",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2200,
+    "subtotal": 2200
+   },
+   {
+    "categoria": "Granos",
+    "producto": "CANELA EN AST",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2400,
+    "subtotal": 2400
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "CERVEZA BAHIA",
+    "cantidad": 6,
+    "unidad": "UN",
+    "precio_unit": 1790,
+    "subtotal": 10740
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "PAPEL HIGIENI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 21200,
+    "subtotal": 21200
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AZUCAR BLANCA",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 3350,
+    "subtotal": 6700
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "MAIZ PIRA EL",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1850,
+    "subtotal": 1850
+   },
+   {
+    "categoria": "Verduras/Frutas",
+    "producto": "CONSERVA DE P",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 6990,
+    "subtotal": 13980
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "BEBIDA DE YOG",
+    "cantidad": 6,
+    "unidad": "UN",
+    "precio_unit": 1100,
+    "subtotal": 6600
+   },
+   {
+    "categoria": "Granos",
+    "producto": "PANELA PASTIL",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 7350,
+    "subtotal": 7350
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "SERVILLETA DO",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 4150,
+    "subtotal": 4150
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "LAVALOZA LIQU",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6300,
+    "subtotal": 6300
+   },
+   {
+    "categoria": "Granos",
+    "producto": "FUSILLI DELIZ",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 3990,
+    "subtotal": 7980
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "CAFE EXCELSO",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 13850,
+    "subtotal": 13850
+   },
+   {
+    "categoria": "Granos",
+    "producto": "LENTEJA EL ES",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1750,
+    "subtotal": 1750
+   },
+   {
+    "categoria": "Granos",
+    "producto": "FRIJOL CARGAM",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 5850,
+    "subtotal": 5850
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "BOLSA BLANCA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2350,
+    "subtotal": 2350
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "JABON NATURAL",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 5350,
+    "subtotal": 5350
+   },
+   {
+    "categoria": "Granos",
+    "producto": "SPAGHETTI DEL",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 3990,
+    "subtotal": 7980
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "PASTILLAS PAR",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3490,
+    "subtotal": 3490
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "ESPIRAL ABRAS",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1900,
+    "subtotal": 1900
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "ESPONJA MULTI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1900,
+    "subtotal": 1900
+   }
+  ]
+ },
+ {
+  "fecha": "2026-08-08",
+  "anio": "2026",
+  "mes": 8,
+  "periodo": "2026-08",
+  "comercio": "Carnes Frías Mega Soacha",
+  "total": 283237,
+  "medio_pago": "Tarjeta",
+  "nota": "Factura POS SOAC-1189; 11 artículos; foto borrosa, ítems leídos suman $296.218",
+  "items": [
+   {
+    "categoria": "Proteínas",
+    "producto": "CARNE PARA ASAR DE RES VARIABLE",
+    "cantidad": 1.02,
+    "unidad": "Kg",
+    "precio_unit": 35000,
+    "subtotal": 35700
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "COSTILLA ESPECIAL DE RES VARIABLE",
+    "cantidad": 1.96,
+    "unidad": "Kg",
+    "precio_unit": 21900,
+    "subtotal": 42924
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "MASATO PASTEURIZADO MAIZ 250ML EL ANTOJO PAISA",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 3800,
+    "subtotal": 3800
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "MASATO PASTEURIZADO ARROZ 250ML EL ANTOJO PAISA",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 3800,
+    "subtotal": 3800
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "QUESO DOBLE CREMA TAJADO 500G TURQUESA",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 12600,
+    "subtotal": 12600
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CHULETA DE CERDO AHUMADA",
+    "cantidad": 2.2,
+    "unidad": "Kg",
+    "precio_unit": "",
+    "subtotal": 77504
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "LOMO DE CERDO VARIABLE",
+    "cantidad": 2.98,
+    "unidad": "Kg",
+    "precio_unit": 18000,
+    "subtotal": 53640
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "SALCHICHA VIENA MANSERVKA",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 11100,
+    "subtotal": 11100
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "LONGANIZA DE CERDO PREMIUM",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 21750,
+    "subtotal": 21750
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AREPA CHOCLO 5 UND 220G LAS ANTIOQUEÑAS",
+    "cantidad": 2,
+    "unidad": "PAQ",
+    "precio_unit": 2700,
+    "subtotal": 5400
+   },
+   {
+    "categoria": "Granos",
+    "producto": "TORTILLA DE HARINA DE TRIGO 12\" X12 UND CALYPSO",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 28000,
+    "subtotal": 28000
+   }
+  ]
+ },
+ {
+  "fecha": "2026-08-29",
+  "anio": "2026",
+  "mes": 8,
+  "periodo": "2026-08",
+  "comercio": "Carnes Frías Mega Soacha",
+  "total": 328304,
+  "medio_pago": "Transferencia",
+  "nota": "13 artículos",
+  "items": [
+   {
+    "categoria": "Verduras/Frutas",
+    "producto": "CEBOLLA EN POLVO 400G",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 11250,
+    "subtotal": 11250
+   },
+   {
+    "categoria": "Verduras/Frutas",
+    "producto": "AJO GRANULADO",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 15000,
+    "subtotal": 15000
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "PRODUCTO 1 PAQ (ilegible)",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 14050,
+    "subtotal": 14050
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "QUESO DOBLE CREMA TAJADO 500G TURQUESA",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 12600,
+    "subtotal": 12600
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "SALSA CHIPOTLE",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 14000,
+    "subtotal": 14000
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CARNE PARA ASAR DE RES VARIABLE",
+    "cantidad": 0.99,
+    "unidad": "Kg",
+    "precio_unit": 35000,
+    "subtotal": 34650
+   },
+   {
+    "categoria": "Granos",
+    "producto": "PAN (ilegible)",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 7600,
+    "subtotal": 7600
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "FILETE DE TILAPIA CALYPSO",
+    "cantidad": 1.04,
+    "unidad": "Kg",
+    "precio_unit": 16500,
+    "subtotal": 17160
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "TOCINO DE CERDO VARIABLE",
+    "cantidad": 1.47,
+    "unidad": "Kg",
+    "precio_unit": 14000,
+    "subtotal": 20580
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "LOMO DE CERDO VARIABLE",
+    "cantidad": 3,
+    "unidad": "Kg",
+    "precio_unit": 18000,
+    "subtotal": 54000
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "COSTILLA ESPECIAL DE RES VARIABLE",
+    "cantidad": 2.5,
+    "unidad": "Kg",
+    "precio_unit": 21900,
+    "subtotal": 54750
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "PRODUCTO DE CERDO (ilegible)",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 5000,
+    "subtotal": 5000
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CHULETA DE CERDO AHUMADA",
+    "cantidad": 2.37,
+    "unidad": "Kg",
+    "precio_unit": 28550,
+    "subtotal": 67664
+   }
+  ]
+ },
+ {
+  "fecha": "2026-08-29",
+  "anio": "2026",
+  "mes": 8,
+  "periodo": "2026-08",
+  "comercio": "Distribuidora Avícola Soacha",
+  "total": 195100,
+  "medio_pago": "Efectivo",
+  "nota": "Factura A051-102155; 15,195 kg; descuentos 20-25%; incluye ajuste a la decena",
+  "items": [
+   {
+    "categoria": "Proteínas",
+    "producto": "ALITA CAMPESINA BOLSA (bruto 49227, desc 20%)",
+    "cantidad": 2.69,
+    "unidad": "Kg",
+    "precio_unit": 18300,
+    "subtotal": 39382
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "PECHUGA CAMPESINA REF (bruto 91179, desc 25%)",
+    "cantidad": 3.815,
+    "unidad": "Kg",
+    "precio_unit": 23900,
+    "subtotal": 68384
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "PERNIL MIXTO CAMPESINO (bruto 113839, desc 25%)",
+    "cantidad": 8.69,
+    "unidad": "Kg",
+    "precio_unit": 13100,
+    "subtotal": 85379
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "BOLSA",
+    "cantidad": 3,
+    "unidad": "Und",
+    "precio_unit": 336,
+    "subtotal": 1008
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "BOLSA",
+    "cantidad": 2,
+    "unidad": "Und",
+    "precio_unit": 168,
+    "subtotal": 336
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "IMPUESTO BOLSA + AJUSTE",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 611,
+    "subtotal": 611
+   }
+  ]
+ },
+ {
+  "fecha": "2026-10-03",
+  "anio": "2026",
+  "mes": 10,
+  "periodo": "2026-10",
+  "comercio": "Distribuidora Avícola Soacha",
+  "total": 195753,
+  "medio_pago": "Tarjeta",
+  "nota": "Factura A051-104242; 13,650 kg; descuento 15%",
+  "items": [
+   {
+    "categoria": "Proteínas",
+    "producto": "ALITA CAMPESINA BOLSA (bruto 62129, desc 15%)",
+    "cantidad": 3.395,
+    "unidad": "Kg",
+    "precio_unit": 18300,
+    "subtotal": 52810
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "PECHUGA CAMPESINA REF (bruto 71939, desc 15%)",
+    "cantidad": 3.01,
+    "unidad": "Kg",
+    "precio_unit": 23900,
+    "subtotal": 61148
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "PERNIL MIXTO CAMPESINO (bruto 94910, desc 15%)",
+    "cantidad": 7.245,
+    "unidad": "Kg",
+    "precio_unit": 13100,
+    "subtotal": 80673
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "BOLSA",
+    "cantidad": 3,
+    "unidad": "Und",
+    "precio_unit": 252,
+    "subtotal": 756
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "IMPUESTO BOLSA + AJUSTE",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 366,
+    "subtotal": 366
+   }
+  ]
+ },
+ {
+  "fecha": "2026-10-03",
+  "anio": "2026",
+  "mes": 10,
+  "periodo": "2026-10",
+  "comercio": "Carnes Frías Mega Soacha",
+  "total": 278490,
+  "medio_pago": "Transferencia",
+  "nota": "16 artículos",
+  "items": [
+   {
+    "categoria": "Proteínas",
+    "producto": "LOMO DE CERDO VARIABLE",
+    "cantidad": 2.99,
+    "unidad": "Kg",
+    "precio_unit": 18000,
+    "subtotal": 53820
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CHULETA/CORTE DE CERDO VARIABLE",
+    "cantidad": 1.04,
+    "unidad": "Kg",
+    "precio_unit": 21000,
+    "subtotal": 21840
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "COSTILLA ESPECIAL DE RES VARIABLE",
+    "cantidad": 2.76,
+    "unidad": "Kg",
+    "precio_unit": 21900,
+    "subtotal": 60444
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "SALCHICHON CERVECERO",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 20350,
+    "subtotal": 20350
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "FILETE DE TILAPIA CALYPSO",
+    "cantidad": 1.28,
+    "unidad": "Kg",
+    "precio_unit": 15500,
+    "subtotal": 19840
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "COSTILLA DE CERDO AHUMADA TIRA",
+    "cantidad": 2.08,
+    "unidad": "Kg",
+    "precio_unit": 24950,
+    "subtotal": 51896
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "CHORIZO MEGAMEXICANO",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 22300,
+    "subtotal": 22300
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "CERVEZA COSTEÑA",
+    "cantidad": 6,
+    "unidad": "Und",
+    "precio_unit": 2000,
+    "subtotal": 12000
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AREPA GRANDE LAS ANTIOQUEÑAS",
+    "cantidad": 1,
+    "unidad": "PAQ",
+    "precio_unit": 3600,
+    "subtotal": 3600
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AREPA CHOCLO 5 UND 220G LAS ANTIOQUEÑAS",
+    "cantidad": 2,
+    "unidad": "PAQ",
+    "precio_unit": 2700,
+    "subtotal": 5400
+   },
+   {
+    "categoria": "Granos",
+    "producto": "PAN PERRO",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 7000,
+    "subtotal": 7000
+   }
+  ]
+ },
+ {
+  "fecha": "2026-10-03",
+  "anio": "2026",
+  "mes": 10,
+  "periodo": "2026-10",
+  "comercio": "D1",
+  "total": 314230,
+  "medio_pago": "Tarjeta",
+  "nota": "37 líneas; ajuste precio arroz -1.760",
+  "items": [
+   {
+    "categoria": "Granos",
+    "producto": "ARROZ DIANA 5",
+    "cantidad": 25,
+    "unidad": "UN",
+    "precio_unit": 1990,
+    "subtotal": 49750
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AJUSTE PRECIO PACA DIANA X25",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": -1760,
+    "subtotal": -1760
+   },
+   {
+    "categoria": "Verduras/Frutas",
+    "producto": "CHAMPIÑON 250",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 7900,
+    "subtotal": 15800
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "PAÑOS MICROF",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 4700,
+    "subtotal": 4700
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "LECHE ENTERA",
+    "cantidad": 3,
+    "unidad": "UN",
+    "precio_unit": 3550,
+    "subtotal": 10650
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "TOCINETA SAND",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 9300,
+    "subtotal": 9300
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "QUESO CREMA L",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3490,
+    "subtotal": 3490
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "COLA & POLA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2150,
+    "subtotal": 2150
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "JABON NATURAL",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 5350,
+    "subtotal": 5350
+   },
+   {
+    "categoria": "Granos",
+    "producto": "ESENCIA DE VA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3150,
+    "subtotal": 3150
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "BOLSA BLANCA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2350,
+    "subtotal": 2350
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "GALLETA SALTI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6600,
+    "subtotal": 6600
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "GALLETA SEMID",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6990,
+    "subtotal": 6990
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "CAFE EXCELSO",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 13850,
+    "subtotal": 27700
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "PAPAS ONDITAS",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3750,
+    "subtotal": 3750
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "TOSTACOS PICA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 6490,
+    "subtotal": 6490
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "MAYONESA TRAD",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 5650,
+    "subtotal": 5650
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "SALSA DE PIME",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 2750,
+    "subtotal": 5500
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "SALSA PARA AD",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 2750,
+    "subtotal": 5500
+   },
+   {
+    "categoria": "Granos",
+    "producto": "SPAGHETTI DEL",
+    "cantidad": 3,
+    "unidad": "UN",
+    "precio_unit": 3990,
+    "subtotal": 11970
+   },
+   {
+    "categoria": "Granos",
+    "producto": "MAIZENA FECUL",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 7200,
+    "subtotal": 7200
+   },
+   {
+    "categoria": "Granos",
+    "producto": "PAPRIKA SPECI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1600,
+    "subtotal": 1600
+   },
+   {
+    "categoria": "Granos",
+    "producto": "CABELLO DE AN",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1100,
+    "subtotal": 1100
+   },
+   {
+    "categoria": "Granos",
+    "producto": "CONCHA DORIA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2100,
+    "subtotal": 2100
+   },
+   {
+    "categoria": "Granos",
+    "producto": "VINAGRE BLANC",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2850,
+    "subtotal": 2850
+   },
+   {
+    "categoria": "Granos",
+    "producto": "PIMIENTA MOLI",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1750,
+    "subtotal": 1750
+   },
+   {
+    "categoria": "Lácteos",
+    "producto": "LECHE EN POLV",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 20900,
+    "subtotal": 20900
+   },
+   {
+    "categoria": "Granos",
+    "producto": "AZUCAR BLANCA",
+    "cantidad": 3,
+    "unidad": "UN",
+    "precio_unit": 3390,
+    "subtotal": 10170
+   },
+   {
+    "categoria": "Granos",
+    "producto": "ACEITE VEGETA",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 19990,
+    "subtotal": 19990
+   },
+   {
+    "categoria": "Granos",
+    "producto": "FRIJOL ROJO",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 2990,
+    "subtotal": 2990
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "VINO CABERNET",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 18500,
+    "subtotal": 18500
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "ATUN RALLADO",
+    "cantidad": 4,
+    "unidad": "UN",
+    "precio_unit": 3450,
+    "subtotal": 13800
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "BLANQUEADOR",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 3100,
+    "subtotal": 3100
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "DESODORANTE H",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 7350,
+    "subtotal": 7350
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "DESODORANTE M",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 7350,
+    "subtotal": 7350
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "LIQUIDO LAVAL",
+    "cantidad": 2,
+    "unidad": "UN",
+    "precio_unit": 2600,
+    "subtotal": 5200
+   },
+   {
+    "categoria": "Bebidas",
+    "producto": "AGUA CON GAS",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1250,
+    "subtotal": 1250
+   },
+   {
+    "categoria": "Mecato",
+    "producto": "WAFER COCOSET",
+    "cantidad": 1,
+    "unidad": "UN",
+    "precio_unit": 1950,
+    "subtotal": 1950
+   }
+  ]
+ }
+]
