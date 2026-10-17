@@ -158,7 +158,7 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 <div id="toast" role="status" aria-live="polite"><span class="material-symbols-rounded" id="tico">task_alt</span><span id="tmsg"></span></div>
 <script>
 /* Whenever index.html changes, bump APP_VERSION and version.json ("v") together. */
-const APP_VERSION='20261017-1';
+const APP_VERSION='20261017-2';
 const VER_KEY='gastos-version-reload';
 async function checkAppVersion(){
   try{
@@ -193,12 +193,15 @@ function sumaCat(rows,fecha,cat){
   const xs=rows.filter(r=>r.fecha===fecha&&r.categoria===cat&&pagado(r));
   return xs.length?xs.reduce((s,r)=>s+Number(r.monto),0):null;
 }
-function textoAnalisis(DATA,yNow,mNow,fechaNow){
+function textoAnalisis(DATA,yNow,mNow,fechaNow,foodByPeriodo){
+  const foodAt=p=>Number((foodByPeriodo||{})[p]||0);
   const enAnio=DATA.some(r=>String(r.anio)===String(yNow));
   const cur=enAnio?DATA.filter(r=>r.fecha===fechaNow&&pagado(r)):[];
-  if(!cur.length) return 'Este mes todavía no hay pagos registrados. En luz tampoco hay un pago todavía.';
+  const foodNow=foodAt(fechaNow);
+  if(!cur.length&&!(foodNow>0)) return 'Este mes todavía no hay pagos registrados. En luz tampoco hay un pago todavía.';
   const byC={};
   cur.forEach(r=>{byC[r.categoria]=(byC[r.categoria]||0)+Number(r.monto);});
+  if(foodNow>0) byC['Alimentación']=foodNow;
   let top=null,topA=-Infinity;
   Object.entries(byC).forEach(([c,a])=>{if(a>topA){top=c;topA=a;}});
   const parts=['Este mes el gasto más alto fue '+top+' ('+fmt(topA)+').'];
@@ -217,9 +220,10 @@ function textoAnalisis(DATA,yNow,mNow,fechaNow){
   }
   if(prev){
     const prevRows=DATA.filter(r=>r.fecha===prev&&pagado(r));
-    const totPrev=prevRows.reduce((s,r)=>s+Number(r.monto),0);
-    const totNow=cur.reduce((s,r)=>s+Number(r.monto),0);
-    if(prevRows.length&&totPrev>0){
+    const foodPrev=foodAt(prev);
+    const totPrev=prevRows.reduce((s,r)=>s+Number(r.monto),0)+foodPrev;
+    const totNow=cur.reduce((s,r)=>s+Number(r.monto),0)+foodNow;
+    if((prevRows.length||foodPrev>0)&&totPrev>0){
       if(totNow===totPrev) parts.push('En total, este mes va igual que el anterior ('+fmt(totNow)+').');
       else{
         const dir=totNow>totPrev?'más':'menos';
@@ -277,8 +281,8 @@ const lab=f=>MES[+f.slice(5)-1]+' '+f.slice(2,4);
 const labL=f=>MES[+f.slice(5)-1]+' '+f.slice(0,4);
 const labDia=f=>{const p=String(f).split('-');if(p.length<3)return labL(String(f).slice(0,7));return (+p[2])+' '+MES[+p[1]-1]+' '+p[0];};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const COL={'Agua':'#0ea5e9','Luz':'#f59e0b','Gas':'#ef4444','Claro':'#64748b','Cuota apto':'#4f46e5','Administración':'#8b5cf6','Libranza':'#10b981','Impuesto predial':'#a16207','DIAN':'#0f766e','Seguro moto':'#ec4899'};
-const ICO={'Agua':'water_drop','Luz':'lightbulb','Gas':'local_fire_department','Claro':'signal_cellular_alt','Cuota apto':'apartment','Administración':'domain','Libranza':'credit_card','Impuesto predial':'account_balance','DIAN':'receipt_long','Seguro moto':'two_wheeler'};
+const COL={'Agua':'#0ea5e9','Luz':'#f59e0b','Gas':'#ef4444','Claro':'#64748b','Cuota apto':'#4f46e5','Administración':'#8b5cf6','Libranza':'#10b981','Impuesto predial':'#a16207','DIAN':'#0f766e','Seguro moto':'#ec4899','Alimentación':'#ea580c'};
+const ICO={'Agua':'water_drop','Luz':'lightbulb','Gas':'local_fire_department','Claro':'signal_cellular_alt','Cuota apto':'apartment','Administración':'domain','Libranza':'credit_card','Impuesto predial':'account_balance','DIAN':'receipt_long','Seguro moto':'two_wheeler','Alimentación':'shopping_cart'};
 const dark=matchMedia('(prefers-color-scheme: dark)').matches;
 const params=new URLSearchParams(location.search);
 
@@ -331,13 +335,18 @@ function start(ALL, FOOD){
   document.getElementById('sub').textContent='Año '+yearDef+' · solo el último año con datos · COP';
   const ok=DATA.filter(r=>r.monto!=='');
   const cats=[...new Set(DATA.map(r=>r.categoria))];
-  const months=[...new Set(ok.map(r=>r.fecha))].sort();
+  const foodAll={};
+  FOOD.forEach(r=>{const p=String(r.periodo||'');if(!/^\d{4}-\d{2}$/.test(p))return;foodAll[p]=(foodAll[p]||0)+Number(r.total)||0;});
+  const foodM=Object.fromEntries(Object.entries(foodAll).filter(([p])=>p.startsWith(yearDef+'-')));
+  const months=[...new Set([...ok.map(r=>r.fecha),...Object.keys(foodM)])].sort();
   const sum=a=>a.reduce((s,r)=>s+r.monto,0);
-  const total=sum(ok);
-  const byM=Object.fromEntries(months.map(m=>[m,sum(ok.filter(r=>r.fecha===m))]));
+  const foodTotal=Object.values(foodM).reduce((s,v)=>s+v,0);
+  const total=sum(ok)+foodTotal;
+  const byM=Object.fromEntries(months.map(m=>[m,sum(ok.filter(r=>r.fecha===m))+(foodM[m]||0)]));
   const byC=Object.fromEntries(cats.map(c=>[c,sum(ok.filter(r=>r.categoria===c))]));
+  if(foodTotal>0) byC['Alimentación']=foodTotal;
   const topM=months.reduce((a,b)=>byM[b]>byM[a]?b:a);
-  const cs=cats.filter(c=>byC[c]>0).sort((a,b)=>byC[b]-byC[a]);
+  const cs=Object.keys(byC).filter(c=>byC[c]>0).sort((a,b)=>byC[b]-byC[a]);
   const topC=cs[0];
 
   // KPIs
@@ -349,9 +358,7 @@ function start(ALL, FOOD){
   kp.innerHTML=K.map(k=>`<div class="card kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
   dots.innerHTML=K.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('');
   kp.addEventListener('scroll',()=>{const w=kp.firstElementChild.offsetWidth+10;const i=Math.round(kp.scrollLeft/w);[...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));},{passive:true});
-  const foodDash=FOOD.filter(r=>String(r.anio)===String(yearDef));
-  const foodLine=foodDash.length?`<div class="food-line"><span class="l"><span class="material-symbols-rounded" style="font-size:18px">shopping_cart</span><span>Alimentación<span class="hint">aparte de los servicios</span></span></span><b>${fmt(foodDash.reduce((s,r)=>s+r.total,0))}</b></div>`:'';
-  document.getElementById('mini').innerHTML=cs.map(c=>`<div><span>${ICO[c]?`<span class="material-symbols-rounded" style="font-size:18px">${ICO[c]}</span> `:''}${c}</span><b>${fmt(byC[c])}</b></div>`).join('')+foodLine;
+  document.getElementById('mini').innerHTML=cs.map(c=>`<div><span>${ICO[c]?`<span class="material-symbols-rounded" style="font-size:18px${c==='Alimentación'?';color:'+COL[c]:''}">${ICO[c]}</span> `:''}${c}</span><b>${fmt(byC[c])}</b></div>`).join('');
   document.getElementById('ms').innerHTML=DATA.filter(r=>r.monto==='').map(r=>`<li><b>${r.categoria} ${labL(r.fecha)}</b> — ${r.archivo}: ${r.nota}</li>`).join('')+
    '<li><b>Excluidos por ser de 2021:</b> “Agua enero.pdf” ($434.033) y “casa cuota 1.jpg” ($576.000); ~100 capturas antiguas (2019–2022) sin nombre descriptivo no se procesaron.</li>';
 
@@ -365,12 +372,13 @@ function start(ALL, FOOD){
   const charts=[];
   charts.push(new Chart(spark,{type:'bar',data:{labels:last6.map(lab),datasets:[{data:last6.map(m=>byM[m]),backgroundColor:dark?'#818cf8':'#4f46e5',borderRadius:6}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:fmtK}},x:{grid:{display:false}}}}}));
-  charts.push(new Chart(bar,{type:'bar',data:{labels:months.map(lab),datasets:cs.map(c=>({label:c,backgroundColor:COL[c],data:months.map(m=>sum(ok.filter(r=>r.fecha===m&&r.categoria===c)))}))},
+  charts.push(new Chart(bar,{type:'bar',data:{labels:months.map(lab),datasets:cs.map(c=>({label:c,backgroundColor:COL[c],data:months.map(m=>c==='Alimentación'?(foodM[m]||0):sum(ok.filter(r=>r.fecha===m&&r.categoria===c)))}))},
     options:{maintainAspectRatio:false,plugins:{tooltip:tt,legend:leg},scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:60,autoSkip:true}},y:{stacked:true,ticks:{callback:fmtK}}}}}));
   charts.push(new Chart(pie,{type:'doughnut',data:{labels:cs,datasets:[{data:cs.map(c=>byC[c]),backgroundColor:cs.map(c=>COL[c]),borderColor:dark?'#151b2e':'#fff',borderWidth:2}]},
     options:{maintainAspectRatio:false,cutout:'62%',plugins:{tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' ('+(100*c.parsed/total).toFixed(1)+'%)'}},legend:leg}}}));
   const svc=['Agua','Luz','Gas','Claro'];const lm=[...new Set(ok.filter(r=>svc.includes(r.categoria)).map(r=>r.fecha))].sort();
-  charts.push(new Chart(line,{type:'line',data:{labels:lm.map(lab),datasets:svc.map(c=>({label:c,borderColor:COL[c],backgroundColor:COL[c],tension:.3,spanGaps:true,pointRadius:small()?2:3,data:lm.map(m=>{const x=ok.find(r=>r.fecha===m&&r.categoria===c);return x?x.monto:null})}))},
+  const lineCats=foodTotal>0?[...svc,'Alimentación']:svc.slice();
+  charts.push(new Chart(line,{type:'line',data:{labels:lm.map(lab),datasets:lineCats.map(c=>({label:c,borderColor:COL[c],backgroundColor:COL[c],tension:.3,spanGaps:true,pointRadius:small()?2:3,data:lm.map(m=>{if(c==='Alimentación')return foodM[m]||0;const x=ok.find(r=>r.fecha===m&&r.categoria===c);return x?x.monto:null})}))},
     options:{maintainAspectRatio:false,plugins:{tooltip:tt,legend:leg},scales:{y:{ticks:{callback:fmtK}},x:{grid:{display:false}}}}}));
 
   // Payments
@@ -497,7 +505,7 @@ function start(ALL, FOOD){
   const foodChart=renderAlimentacion();
   foodAnalysis(FOOD);
 
-  // Alerta del mes calendario (America/Bogota) y análisis breve del mismo mes. Los recibos de alimentación no entran aquí.
+  // Alerta del mes calendario (America/Bogota): Alimentación no es un recibo esperado. El análisis breve sí la suma.
   const {year:yNow,month:mNow}=bogotaYM();
   const mesNombre=MES_L[mNow-1];
   const fechaNow=yNow+'-'+String(mNow).padStart(2,'0');
@@ -518,7 +526,7 @@ function start(ALL, FOOD){
     tico.textContent='warning';
     toast.classList.add('warn');
   }
-  document.getElementById('analisis-txt').textContent=textoAnalisis(DATA,yNow,mNow,fechaNow);
+  document.getElementById('analisis-txt').textContent=textoAnalisis(DATA,yNow,mNow,fechaNow,foodAll);
   const foodTxt=textoAlimentacion(FOOD,yNow,mNow);
   const foodEl=document.getElementById('analisis-food');
   foodEl.hidden=!foodTxt;
