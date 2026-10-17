@@ -115,6 +115,7 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 <main>
  <div id="loading">Cargando datos…</div>
  <section id="resumen" class="view">
+  <div class="chips" id="resumen-months"></div>
   <div class="kpis" id="kpis"></div>
   <div class="dots" id="dots"></div>
   <div class="card"><h2>Por categoría</h2><div class="mini" id="mini"></div></div>
@@ -123,6 +124,7 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
   <div class="card note"><h2>Recibos faltantes o ilegibles</h2><ul id="ms"></ul></div>
  </section>
  <section id="graficas" class="view">
+  <div class="chips" id="graficas-months"></div>
   <div class="g2">
    <div class="card"><h2>Gasto mensual por categoría</h2><div class="ch tall"><canvas id="bar"></canvas></div></div>
    <div class="card"><h2>Distribución por categoría</h2><div class="ch tall"><canvas id="pie"></canvas></div></div>
@@ -158,7 +160,7 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 <div id="toast" role="status" aria-live="polite"><span class="material-symbols-rounded" id="tico">task_alt</span><span id="tmsg"></span></div>
 <script>
 /* Whenever index.html changes, bump APP_VERSION and version.json ("v") together. */
-const APP_VERSION='20261017-4';
+const APP_VERSION='20261017-5';
 const VER_KEY='gastos-version-reload';
 async function checkAppVersion(){
   try{
@@ -193,23 +195,25 @@ function sumaCat(rows,fecha,cat){
   const xs=rows.filter(r=>r.fecha===fecha&&r.categoria===cat&&pagado(r));
   return xs.length?xs.reduce((s,r)=>s+Number(r.monto),0):null;
 }
-function textoAnalisis(DATA,yNow,mNow,fechaNow,foodByPeriodo){
+function textoAnalisis(DATA,yNow,mNow,fechaNow,foodByPeriodo,esActual){
+  if(esActual==null) esActual=true;
+  const nom=MES_L[mNow-1];
   const foodAt=p=>Number((foodByPeriodo||{})[p]||0);
   const enAnio=DATA.some(r=>String(r.anio)===String(yNow));
   const cur=enAnio?DATA.filter(r=>r.fecha===fechaNow&&pagado(r)):[];
   const foodNow=foodAt(fechaNow);
-  if(!cur.length&&!(foodNow>0)) return 'Este mes todavía no hay pagos registrados. En luz tampoco hay un pago todavía.';
+  if(!cur.length&&!(foodNow>0)) return esActual?'Este mes todavía no hay pagos registrados. En luz tampoco hay un pago todavía.':'En '+nom+' no hay pagos registrados. En luz tampoco hay un pago en '+nom+'.';
   const byC={};
   cur.forEach(r=>{byC[r.categoria]=(byC[r.categoria]||0)+Number(r.monto);});
   if(foodNow>0) byC['Alimentación']=foodNow;
   let top=null,topA=-Infinity;
   Object.entries(byC).forEach(([c,a])=>{if(a>topA){top=c;topA=a;}});
-  const parts=['Este mes el gasto más alto fue '+top+' ('+fmt(topA)+').'];
+  const parts=[(esActual?'Este mes':'En '+nom)+' el gasto más alto fue '+top+' ('+fmt(topA)+').'];
   const luz=Object.prototype.hasOwnProperty.call(byC,'Luz')?byC.Luz:null;
   const prevM=mNow-1;
   const prev=prevM>=1?yNow+'-'+String(prevM).padStart(2,'0'):null;
   const luzPrev=prev?sumaCat(DATA,prev,'Luz'):null;
-  if(luz==null) parts.push('En luz todavía no hay pago este mes.');
+  if(luz==null) parts.push(esActual?'En luz todavía no hay pago este mes.':'En luz no hay pago en '+nom+'.');
   else if(!prev) parts.push('En luz pagaste '+fmt(luz)+'.');
   else if(luzPrev==null) parts.push('En luz pagaste '+fmt(luz)+'. El mes pasado no hay pago de luz para comparar.');
   else if(luz===luzPrev) parts.push('En luz pagaste '+fmt(luz)+', igual que el mes pasado.');
@@ -233,7 +237,8 @@ function textoAnalisis(DATA,yNow,mNow,fechaNow,foodByPeriodo){
   }
   return parts.join(' ');
 }
-function textoAlimentacion(FOOD,yNow,mNow){
+function textoAlimentacion(FOOD,yNow,mNow,esActual){
+  if(esActual==null) esActual=true;
   const per=yNow+'-'+String(mNow).padStart(2,'0');
   const cur=FOOD.filter(r=>r.periodo===per);
   if(!cur.length) return '';
@@ -242,7 +247,8 @@ function textoAlimentacion(FOOD,yNow,mNow){
   if(prevM<1){prevM=12;prevY=yNow-1;}
   const prevPer=prevY+'-'+String(prevM).padStart(2,'0');
   const prev=FOOD.filter(r=>r.periodo===prevPer);
-  if(!prev.length) return 'En alimentación van '+fmt(tot)+' este mes.';
+  const aqui=esActual?'este mes':'en '+MES_L[mNow-1];
+  if(!prev.length) return 'En alimentación van '+fmt(tot)+' '+aqui+'.';
   const totPrev=prev.reduce((s,r)=>s+Number(r.total),0);
   if(tot===totPrev) return 'En alimentación van '+fmt(tot)+', igual que el mes pasado.';
   if(!(totPrev>0)) return 'En alimentación van '+fmt(tot)+' (el mes pasado fue '+fmt(totPrev)+').';
@@ -349,18 +355,63 @@ function start(ALL, FOOD){
   const cs=Object.keys(byC).filter(c=>byC[c]>0).sort((a,b)=>byC[b]-byC[a]);
   const topC=cs[0];
 
-  // KPIs
-  const K=[['Total gastado',fmt(total),ok.length+' pagos registrados'],
-           ['Promedio mensual',fmt(total/months.length),'sobre '+months.length+' meses con pagos'],
-           ['Mes más caro',labL(topM),fmt(byM[topM])],
-           ['Categoría principal',topC,fmt(byC[topC])+' · '+(100*byC[topC]/total).toFixed(1)+'%']];
-  const kp=document.getElementById('kpis'),dots=document.getElementById('dots');
-  kp.innerHTML=K.map(k=>`<div class="card kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
-  dots.innerHTML=K.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('');
-  kp.addEventListener('scroll',()=>{const w=kp.firstElementChild.offsetWidth+10;const i=Math.round(kp.scrollLeft/w);[...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));},{passive:true});
-  document.getElementById('mini').innerHTML=cs.map(c=>`<div><span>${ICO[c]?`<span class="material-symbols-rounded" style="font-size:18px${c==='Alimentación'?';color:'+COL[c]:''}">${ICO[c]}</span> `:''}${c}</span><b>${fmt(byC[c])}</b></div>`).join('');
   document.getElementById('ms').innerHTML=DATA.filter(r=>r.monto==='').map(r=>`<li><b>${r.categoria} ${labL(r.fecha)}</b> — ${r.archivo}: ${r.nota}</li>`).join('')+
    '<li><b>Excluidos por ser de 2021:</b> “Agua enero.pdf” ($434.033) y “casa cuota 1.jpg” ($576.000); ~100 capturas antiguas (2019–2022) sin nombre descriptivo no se procesaron.</li>';
+
+  const {year:yNow,month:mNow}=bogotaYM();
+  const fechaNow=yNow+'-'+String(mNow).padStart(2,'0');
+  let sel=months.includes(fechaNow)?fechaNow:(months[months.length-1]||'');
+  function amt(m,c){return c==='Alimentación'?(foodM[m]||0):sum(ok.filter(r=>r.fecha===m&&r.categoria===c));}
+  function catOf(periodo){
+    const map={};
+    ok.filter(r=>r.fecha===periodo).forEach(r=>{map[r.categoria]=(map[r.categoria]||0)+Number(r.monto);});
+    if(foodM[periodo]) map['Alimentación']=foodM[periodo];
+    return map;
+  }
+  function monthTotal(periodo){return sum(ok.filter(r=>r.fecha===periodo))+(foodM[periodo]||0);}
+  function miniHtml(map,list){return list.map(c=>`<div><span>${ICO[c]?`<span class="material-symbols-rounded" style="font-size:18px${c==='Alimentación'?';color:'+COL[c]:''}">${ICO[c]}</span> `:''}${c}</span><b>${fmt(map[c])}</b></div>`).join('');}
+  const kp=document.getElementById('kpis'),dots=document.getElementById('dots');
+  kp.addEventListener('scroll',()=>{const w=kp.firstElementChild.offsetWidth+10;const i=Math.round(kp.scrollLeft/w);[...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));},{passive:true});
+  function renderScope(){
+    let K,map,list,txt,foodTxt='';
+    if(!sel){
+      document.getElementById('sub').textContent='Año '+yearDef+' · solo el último año con datos · COP';
+      K=[['Total gastado',fmt(total),ok.length+' pagos registrados'],
+         ['Promedio mensual',fmt(total/months.length),'sobre '+months.length+' meses con pagos'],
+         ['Mes más caro',labL(topM),fmt(byM[topM])],
+         ['Categoría principal',topC,fmt(byC[topC])+' · '+(100*byC[topC]/total).toFixed(1)+'%']];
+      map=byC;list=cs;
+      txt='En '+yearDef+' el gasto más alto fue '+topC+' ('+fmt(byC[topC])+'). El mes más caro fue '+labL(topM)+' ('+fmt(byM[topM])+'). En total van '+fmt(total)+'.';
+    }else{
+      const mo=+sel.slice(5),y=+sel.slice(0,4),nom=MES_L[mo-1];
+      document.getElementById('sub').textContent=nom.charAt(0).toUpperCase()+nom.slice(1)+' '+y+' · COP';
+      map=catOf(sel);
+      list=Object.keys(map).filter(c=>map[c]>0).sort((a,b)=>map[b]-map[a]);
+      const tot=monthTotal(sel);
+      const prevM=mo-1;
+      const prev=prevM>=1?y+'-'+String(prevM).padStart(2,'0'):'';
+      const prevTot=prev?monthTotal(prev):0;
+      const nPay=ok.filter(r=>r.fecha===sel).length;
+      let cmp=prev?'sin pagos el mes pasado':'sin mes anterior en el año';
+      if(prev&&prevTot>0) cmp=tot===prevTot?'igual que '+MES_L[prevM-1]:fmtPct(Math.abs(tot-prevTot)/prevTot*100)+' '+(tot>prevTot?'más':'menos')+' que '+MES_L[prevM-1];
+      const top=list[0];
+      K=[['Total del mes',fmt(tot),nom+' '+y],
+         ['Mes anterior',prev&&prevTot?fmt(prevTot):'—',cmp],
+         ['Categoría principal',top||'—',top?fmt(map[top])+' · '+(tot?100*map[top]/tot:0).toFixed(1)+'%':''],
+         ['Pagos del mes',String(nPay),nPay===1?'servicio registrado':'servicios registrados']];
+      const esActual=sel===fechaNow;
+      txt=textoAnalisis(DATA,y,mo,sel,foodAll,esActual);
+      foodTxt=textoAlimentacion(FOOD,y,mo,esActual);
+    }
+    kp.innerHTML=K.map(k=>`<div class="card kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
+    dots.innerHTML=K.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('');
+    kp.scrollLeft=0;
+    document.getElementById('mini').innerHTML=miniHtml(map,list);
+    document.getElementById('analisis-txt').textContent=txt;
+    const foodEl=document.getElementById('analisis-food');
+    foodEl.hidden=!foodTxt;
+    foodEl.textContent=foodTxt;
+  }
 
   // Charts
   const tc=dark?'#cbd5e1':'#374151',gc=dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.06)';
@@ -369,17 +420,45 @@ function start(ALL, FOOD){
   const leg={position:'bottom',labels:{boxWidth:10,boxHeight:10,padding:10,usePointStyle:true,font:{size:11}}};
   const tt={callbacks:{label:c=>(c.dataset.label||c.label)+': '+fmt(c.parsed.y??c.parsed)}};
   const last6=months.slice(-6);
-  const charts=[];
-  charts.push(new Chart(spark,{type:'bar',data:{labels:last6.map(lab),datasets:[{data:last6.map(m=>byM[m]),backgroundColor:dark?'#818cf8':'#4f46e5',borderRadius:6}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:fmtK}},x:{grid:{display:false}}}}}));
-  charts.push(new Chart(bar,{type:'bar',data:{labels:months.map(lab),datasets:cs.map(c=>({label:c,backgroundColor:COL[c],data:months.map(m=>c==='Alimentación'?(foodM[m]||0):sum(ok.filter(r=>r.fecha===m&&r.categoria===c)))}))},
-    options:{maintainAspectRatio:false,plugins:{tooltip:tt,legend:leg},scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:60,autoSkip:true}},y:{stacked:true,ticks:{callback:fmtK}}}}}));
-  charts.push(new Chart(pie,{type:'doughnut',data:{labels:cs,datasets:[{data:cs.map(c=>byC[c]),backgroundColor:cs.map(c=>COL[c]),borderColor:dark?'#151b2e':'#fff',borderWidth:2}]},
-    options:{maintainAspectRatio:false,cutout:'62%',plugins:{tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' ('+(100*c.parsed/total).toFixed(1)+'%)'}},legend:leg}}}));
   const svc=['Agua','Luz','Gas','Claro'];const lm=[...new Set(ok.filter(r=>svc.includes(r.categoria)).map(r=>r.fecha))].sort();
   const lineCats=foodTotal>0?[...svc,'Alimentación']:svc.slice();
-  charts.push(new Chart(line,{type:'line',data:{labels:lm.map(lab),datasets:lineCats.map(c=>({label:c,borderColor:COL[c],backgroundColor:COL[c],tension:.3,spanGaps:true,pointRadius:small()?2:3,data:lm.map(m=>{if(c==='Alimentación')return foodM[m]||0;const x=ok.find(r=>r.fecha===m&&r.categoria===c);return x?x.monto:null})}))},
-    options:{maintainAspectRatio:false,plugins:{tooltip:tt,legend:leg},scales:{y:{ticks:{callback:fmtK}},x:{grid:{display:false}}}}}));
+  const charts=[];
+  let sparkC,barC,pieC,lineC;
+  function renderCharts(){
+    const accent=dark?'#818cf8':'#4f46e5',muted=dark?'rgba(129,140,248,.28)':'rgba(79,70,229,.28)';
+    const sData={labels:last6.map(lab),datasets:[{data:last6.map(m=>byM[m]),backgroundColor:last6.map(m=>!sel||m===sel?accent:muted),borderRadius:6}]};
+    const sOpt={maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:fmtK}},x:{grid:{display:false}}}};
+    if(!sparkC){sparkC=new Chart(spark,{type:'bar',data:sData,options:sOpt});charts.push(sparkC);}
+    else{sparkC.data.labels=sData.labels;sparkC.data.datasets=sData.datasets;sparkC.update();}
+    const series=sel?[sel]:months;
+    const viewMap=sel?catOf(sel):byC;
+    const viewCs=Object.keys(viewMap).filter(c=>viewMap[c]>0).sort((a,b)=>viewMap[b]-viewMap[a]);
+    const bData={labels:series.map(lab),datasets:viewCs.map(c=>({label:c,backgroundColor:COL[c],data:series.map(m=>amt(m,c))}))};
+    const bOpt={maintainAspectRatio:false,plugins:{tooltip:tt,legend:leg},scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:60,autoSkip:true}},y:{stacked:true,ticks:{callback:fmtK}}}};
+    if(!barC){barC=new Chart(bar,{type:'bar',data:bData,options:bOpt});charts.push(barC);}
+    else{barC.data.labels=bData.labels;barC.data.datasets=bData.datasets;barC.update();}
+    const pData={labels:viewCs,datasets:[{data:viewCs.map(c=>viewMap[c]),backgroundColor:viewCs.map(c=>COL[c]),borderColor:dark?'#151b2e':'#fff',borderWidth:2}]};
+    const pOpt={maintainAspectRatio:false,cutout:'62%',plugins:{tooltip:{callbacks:{label:c=>{const tot=(c.dataset.data||[]).reduce((s,v)=>s+Number(v||0),0);return c.label+': '+fmt(c.parsed)+' ('+(tot?100*c.parsed/tot:0).toFixed(1)+'%)';}}},legend:leg}};
+    if(!pieC){pieC=new Chart(pie,{type:'doughnut',data:pData,options:pOpt});charts.push(pieC);}
+    else{pieC.data.labels=pData.labels;pieC.data.datasets=pData.datasets;pieC.update();}
+    const lData={labels:lm.map(lab),datasets:lineCats.map(c=>({label:c,borderColor:COL[c],backgroundColor:COL[c],tension:.3,spanGaps:true,pointRadius:lm.map(m=>m===sel?(small()?5:7):(small()?2:3)),pointBorderWidth:lm.map(m=>m===sel?3:1),data:lm.map(m=>{if(c==='Alimentación')return foodM[m]||0;const x=ok.find(r=>r.fecha===m&&r.categoria===c);return x?x.monto:null})}))};
+    const lOpt={maintainAspectRatio:false,plugins:{tooltip:tt,legend:leg},scales:{y:{ticks:{callback:fmtK}},x:{grid:{display:false}}}};
+    if(!lineC){lineC=new Chart(line,{type:'line',data:lData,options:lOpt});charts.push(lineC);}
+    else{lineC.data.labels=lData.labels;lineC.data.datasets=lData.datasets;lineC.update();}
+  }
+  const monthChip=(v,t,on)=>`<button class="chip${on?' on':''}" data-v="${v}">${t}</button>`;
+  function paintMonthChips(){
+    const html=monthChip('','Todos',!sel)+months.map(m=>monthChip(m,MES_L[+m.slice(5)-1],m===sel)).join('');
+    document.getElementById('resumen-months').innerHTML=html;
+    document.getElementById('graficas-months').innerHTML=html;
+  }
+  function pickMonth(e){
+    const b=e.target.closest('.chip');if(!b)return;
+    sel=b.dataset.v;paintMonthChips();renderScope();renderCharts();
+  }
+  document.getElementById('resumen-months').onclick=pickMonth;
+  document.getElementById('graficas-months').onclick=pickMonth;
+  paintMonthChips();renderScope();renderCharts();
 
   // Payments
   let fy=yearDef,fc='';
@@ -505,10 +584,8 @@ function start(ALL, FOOD){
   const foodChart=renderAlimentacion();
   foodAnalysis(FOOD);
 
-  // Alerta del mes calendario (America/Bogota): Alimentación no es un recibo esperado. El análisis breve sí la suma.
-  const {year:yNow,month:mNow}=bogotaYM();
+  // Alerta del mes calendario (America/Bogota): no cambia con el chip de mes. Alimentación no es un recibo esperado.
   const mesNombre=MES_L[mNow-1];
-  const fechaNow=yNow+'-'+String(mNow).padStart(2,'0');
   const pagados=new Set(ALL.filter(r=>String(r.anio)===String(yNow)&&+r.mes===mNow&&pagado(r)).map(r=>r.categoria));
   const esp=esperado(mNow);
   const faltan=esp.filter(c=>!pagados.has(c));
@@ -526,12 +603,6 @@ function start(ALL, FOOD){
     tico.textContent='warning';
     toast.classList.add('warn');
   }
-  document.getElementById('analisis-txt').textContent=textoAnalisis(DATA,yNow,mNow,fechaNow,foodAll);
-  const foodTxt=textoAlimentacion(FOOD,yNow,mNow);
-  const foodEl=document.getElementById('analisis-food');
-  foodEl.hidden=!foodTxt;
-  foodEl.textContent=foodTxt;
-
   toast.classList.add('on');
   const fixToast=()=>placeToast(toast);
   requestAnimationFrame(fixToast);
