@@ -1438,5 +1438,41 @@
     "subtotal": 130000
    }
   ]
+ },
+ {
+  "fecha": "2026-10-17",
+  "anio": "2026",
+  "mes": 10,
+  "periodo": "2026-10",
+  "comercio": "Surtimayorista Soacha (Éxito)",
+  "total": 44480,
+  "medio_pago": "Tarjeta",
+  "nota": "Factura VP2530075; 3 ítems; ahorro $5.490",
+  "items": [
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "DETERGENTE REGUL (ahorro -5.490)",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 27450,
+    "subtotal": 21960
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "SHAMPOO SUAVE",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 14250,
+    "subtotal": 14250
+   },
+   {
+    "categoria": "Aseo/Hogar",
+    "producto": "TOALLAS SEMIDESE",
+    "cantidad": 1,
+    "unidad": "Und",
+    "precio_unit": 8270,
+    "subtotal": 8270
+   }
+  ]
  }
 ]
