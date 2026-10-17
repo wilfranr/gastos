@@ -778,12 +778,12 @@
  {
   "fecha": "2026-08-29",
   "anio": "2026",
-  "mes": 8,
-  "periodo": "2026-08",
+  "mes": 9,
+  "periodo": "2026-09",
   "comercio": "Carnes Frías Mega Soacha",
   "total": 328304,
   "medio_pago": "Transferencia",
-  "nota": "13 artículos",
+  "nota": "13 artículos; mercado de septiembre",
   "items": [
    {
     "categoria": "Verduras/Frutas",
@@ -894,12 +894,12 @@
  {
   "fecha": "2026-08-29",
   "anio": "2026",
-  "mes": 8,
-  "periodo": "2026-08",
+  "mes": 9,
+  "periodo": "2026-09",
   "comercio": "Distribuidora Avícola Soacha",
   "total": 195100,
   "medio_pago": "Efectivo",
-  "nota": "Factura A051-102155; 15,195 kg; descuentos 20-25%; incluye ajuste a la decena",
+  "nota": "Factura A051-102155; 15,195 kg; descuentos 20-25%; incluye ajuste a la decena; mercado de septiembre",
   "items": [
    {
     "categoria": "Proteínas",
