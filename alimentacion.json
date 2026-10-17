@@ -1418,5 +1418,25 @@
     "subtotal": 1950
    }
   ]
+ },
+ {
+  "fecha": "2026-10-17",
+  "anio": "2026",
+  "mes": 10,
+  "periodo": "2026-10",
+  "comercio": "Frutas y verduras (sin factura)",
+  "total": 130000,
+  "medio_pago": "",
+  "nota": "Valor mensual reportado sin factura",
+  "items": [
+   {
+    "categoria": "Verduras/Frutas",
+    "producto": "FRUTAS Y VERDURAS (MES)",
+    "cantidad": 1,
+    "unidad": "Mes",
+    "precio_unit": 130000,
+    "subtotal": 130000
+   }
+  ]
  }
 ]
