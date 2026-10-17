@@ -48,6 +48,16 @@ h2{font-size:15px;margin:0 0 10px}
 .pay .n{font-size:11px;color:var(--mu);margin-top:2px}
 .pay .a{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}.pay .a.miss{color:var(--warn);font-weight:600;font-size:13px}
 .note{background:var(--warnbg);border-color:transparent}.note li{margin:6px 0;font-size:13px}.note ul{padding-left:18px;margin:0}
+.kpis.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow:visible;margin:0 0 12px;padding:0;scroll-snap-type:none}
+.kpis.two .kpi{flex:none;min-width:0}.kpis.two .kpi .v{font-size:clamp(15px,4.2vw,24px)}
+.food-line{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:10px 12px;border:1px dashed var(--bd);border-left:3px solid #f97316}
+.food-line .l{font-size:13px;color:var(--tx);display:flex;align-items:center;gap:6px}
+.food-line .hint{display:block;font-size:11px;font-weight:400;color:var(--mu)}
+.food-line b{font-size:15px;font-variant-numeric:tabular-nums}
+.empty-food{text-align:center;padding:36px 18px}
+.empty-food .material-symbols-rounded{font-size:42px;color:var(--ac);display:block;margin:0 auto 8px}
+.empty-food p{margin:0 auto;max-width:36ch;font-size:14px;line-height:1.5;color:var(--mu)}
+nav button .material-symbols-rounded{font-size:22px;line-height:1;vertical-align:middle}
 /* bottom nav */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;background:none;border:0;color:var(--mu);padding:9px 0 8px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
@@ -65,12 +75,15 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
 #toast .material-symbols-rounded{color:#10b981;font-size:20px;flex:0 0 auto}
 #toast.warn .material-symbols-rounded{color:var(--warn)}
 #analisis p{margin:0;font-size:14px;line-height:1.5}
+#analisis p+p{margin-top:8px}
 /* desktop */
 @media (min-width:900px){
  body{padding-bottom:0}
  nav{position:sticky;top:58px;bottom:auto;max-width:1100px;margin:0 auto;border:0;background:transparent;backdrop-filter:none;justify-content:flex-start;gap:6px;padding:10px 14px 0}
  nav button{flex:0 0 auto;flex-direction:row;font-size:14px;padding:8px 14px;border-radius:99px;gap:6px}
  nav button.on{background:var(--ac);color:#fff}nav button svg{width:18px;height:18px}
+ nav button .material-symbols-rounded{font-size:18px}
+ #food-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}#food-list .pay{margin:0}
  .kpis{display:grid;grid-template-columns:repeat(4,1fr);overflow:visible;margin:0}.kpi{flex:none}.dots{display:none}
  .g2{display:grid;grid-template-columns:2fr 1fr;gap:12px}.g2>.card{margin:0}
  .ch{height:340px}
@@ -88,6 +101,7 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
  <button data-v="resumen" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>Resumen</button>
  <button data-v="graficas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Gráficas</button>
  <button data-v="pagos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>Pagos</button>
+ <button data-v="alimentacion"><span class="material-symbols-rounded" aria-hidden="true">shopping_cart</span>Alimentación</button>
 </nav>
 <main>
  <div id="loading">Cargando datos…</div>
@@ -96,7 +110,7 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
   <div class="dots" id="dots"></div>
   <div class="card"><h2>Por categoría</h2><div class="mini" id="mini"></div></div>
   <div class="card"><h2>Últimos 6 meses</h2><div class="ch" style="height:220px"><canvas id="spark"></canvas></div></div>
-  <div class="card" id="analisis"><h2><span class="material-symbols-rounded" style="font-size:18px">insights</span> Análisis</h2><p id="analisis-txt"></p></div>
+  <div class="card" id="analisis"><h2><span class="material-symbols-rounded" style="font-size:18px">insights</span> Análisis</h2><p id="analisis-txt"></p><p id="analisis-food" hidden></p></div>
   <div class="card note"><h2>Recibos faltantes o ilegibles</h2><ul id="ms"></ul></div>
  </section>
  <section id="graficas" class="view">
@@ -111,6 +125,19 @@ nav button svg{width:22px;height:22px}nav button.on{color:var(--ac);font-weight:
   <div class="chips" id="cc"></div>
   <div class="sum" id="ft"></div>
   <div id="list"></div>
+ </section>
+ <section id="alimentacion" class="view">
+  <div id="food-body" hidden>
+   <div class="kpis two" id="food-kpis"></div>
+   <div class="card"><h2 id="food-chart-title">Gasto mensual</h2><div class="ch" style="height:240px"><canvas id="foodbar"></canvas></div></div>
+   <div class="chips" id="food-months"></div>
+   <div class="sum" id="food-sum"></div>
+   <div id="food-list"></div>
+  </div>
+  <div class="card empty-food" id="food-empty">
+   <span class="material-symbols-rounded">shopping_cart</span>
+   <p>Aún no hay facturas de alimentación. Mándale la foto a FactuBot y aparecerá aquí.</p>
+  </div>
  </section>
 </main>
 <div id="lock"><form id="lf"><span class="material-symbols-rounded" style="font-size:40px;color:#4f46e5">lock</span><h2 style="font-size:18px;margin:8px 0 0">Datos protegidos</h2>
@@ -171,6 +198,22 @@ function textoAnalisis(DATA,yNow,mNow,fechaNow){
   }
   return parts.join(' ');
 }
+function textoAlimentacion(FOOD,yNow,mNow){
+  const per=yNow+'-'+String(mNow).padStart(2,'0');
+  const cur=FOOD.filter(r=>r.periodo===per);
+  if(!cur.length) return '';
+  const tot=cur.reduce((s,r)=>s+Number(r.total),0);
+  let prevY=yNow,prevM=mNow-1;
+  if(prevM<1){prevM=12;prevY=yNow-1;}
+  const prevPer=prevY+'-'+String(prevM).padStart(2,'0');
+  const prev=FOOD.filter(r=>r.periodo===prevPer);
+  if(!prev.length) return 'En alimentación van '+fmt(tot)+' este mes.';
+  const totPrev=prev.reduce((s,r)=>s+Number(r.total),0);
+  if(tot===totPrev) return 'En alimentación van '+fmt(tot)+', igual que el mes pasado.';
+  if(!(totPrev>0)) return 'En alimentación van '+fmt(tot)+' (el mes pasado fue '+fmt(totPrev)+').';
+  const dir=tot>totPrev?'más':'menos';
+  return 'En alimentación van '+fmt(tot)+', '+fmtPct(Math.abs(tot-totPrev)/totPrev*100)+' '+dir+' que el mes pasado ('+fmt(totPrev)+').';
+}
 function overlaps(a,b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}
 function inkBox(el){
   const range=document.createRange();
@@ -201,6 +244,8 @@ const fmt=v=>'$'+Math.round(v).toLocaleString('es-CO').replace(/,/g,'.');
 const fmtK=v=>v>=1e6?'$'+(v/1e6).toFixed(1).replace('.',',')+'M':'$'+Math.round(v/1e3)+'k';
 const lab=f=>MES[+f.slice(5)-1]+' '+f.slice(2,4);
 const labL=f=>MES[+f.slice(5)-1]+' '+f.slice(0,4);
+const labDia=f=>{const p=String(f).split('-');if(p.length<3)return labL(String(f).slice(0,7));return (+p[2])+' '+MES[+p[1]-1]+' '+p[0];};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const COL={'Agua':'#0ea5e9','Luz':'#f59e0b','Gas':'#ef4444','Claro':'#64748b','Cuota apto':'#4f46e5','Administración':'#8b5cf6','Libranza':'#10b981','Impuesto predial':'#a16207','DIAN':'#0f766e','Seguro moto':'#ec4899'};
 const ICO={'Agua':'water_drop','Luz':'lightbulb','Gas':'local_fire_department','Claro':'signal_cellular_alt','Cuota apto':'apartment','Administración':'domain','Libranza':'credit_card','Impuesto predial':'account_balance','DIAN':'receipt_long','Seguro moto':'two_wheeler'};
 const dark=matchMedia('(prefers-color-scheme: dark)').matches;
@@ -214,22 +259,39 @@ async function decrypt(env,pw){
   const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(env.iv)},key,b64(env.ct));
   return JSON.parse(new TextDecoder().decode(pt));
 }
+async function loadFood(){
+  try{
+    const r=await fetch('alimentacion.json',{cache:'no-store'});
+    if(!r.ok)return [];
+    const d=await r.json();
+    if(!Array.isArray(d))return [];
+    return d.filter(row=>row&&row.fecha!=null&&row.total!=null&&row.total!==''&&Number.isFinite(Number(row.total))).map(row=>{
+      const fecha=String(row.fecha);
+      const anio=String(row.anio??fecha.slice(0,4));
+      const mes=row.mes!=null?+row.mes:+fecha.slice(5,7);
+      const periodo=row.periodo?String(row.periodo):anio+'-'+String(mes).padStart(2,'0');
+      return {fecha,anio,mes,periodo,comercio:row.comercio||'',total:Number(row.total),medio_pago:row.medio_pago||'',nota:row.nota||''};
+    });
+  }catch(e){return [];}
+}
 async function load(){
+  const foodP=loadFood();
   const forceEnc=params.get('mode')==='enc';
   if(!forceEnc){
-    try{const r=await fetch('data.json',{cache:'no-store'});if(r.ok)return start(await r.json());}catch(e){}
+    try{const r=await fetch('data.json',{cache:'no-store'});if(r.ok)return start(await r.json(),await foodP);}catch(e){}
   }
   let env;
   try{const r=await fetch('data.enc',{cache:'no-store'});if(!r.ok)throw 0;env=await r.json();}
   catch(e){document.getElementById('loading').textContent='No se encontraron datos (data.json ni data.enc). Si abriste el archivo localmente, sírvelo con un servidor (p. ej. python3 -m http.server).';return;}
   const lock=document.getElementById('lock');lock.style.display='grid';document.getElementById('pw').focus();
   document.getElementById('lf').onsubmit=async ev=>{ev.preventDefault();const perr=document.getElementById('perr');perr.textContent='Verificando…';
-    try{const d=await decrypt(env,document.getElementById('pw').value);lock.style.display='none';start(d);}
+    try{const d=await decrypt(env,document.getElementById('pw').value);lock.style.display='none';start(d,await foodP);}
     catch(e){perr.textContent='Contraseña incorrecta.';}};
 }
 
 // ---------- app ----------
-function start(ALL){
+function start(ALL, FOOD){
+  FOOD=Array.isArray(FOOD)?FOOD:[];
   document.getElementById('loading').remove();
   const yearsAll=[...new Set(ALL.map(r=>String(r.anio)))].sort();
   const yearDef=yearsAll[yearsAll.length-1];
@@ -255,7 +317,9 @@ function start(ALL){
   kp.innerHTML=K.map(k=>`<div class="card kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
   dots.innerHTML=K.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('');
   kp.addEventListener('scroll',()=>{const w=kp.firstElementChild.offsetWidth+10;const i=Math.round(kp.scrollLeft/w);[...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));},{passive:true});
-  document.getElementById('mini').innerHTML=cs.map(c=>`<div><span>${ICO[c]?`<span class="material-symbols-rounded" style="font-size:18px">${ICO[c]}</span> `:''}${c}</span><b>${fmt(byC[c])}</b></div>`).join('');
+  const foodDash=FOOD.filter(r=>String(r.anio)===String(yearDef));
+  const foodLine=foodDash.length?`<div class="food-line"><span class="l"><span class="material-symbols-rounded" style="font-size:18px">shopping_cart</span><span>Alimentación<span class="hint">aparte de los servicios</span></span></span><b>${fmt(foodDash.reduce((s,r)=>s+r.total,0))}</b></div>`:'';
+  document.getElementById('mini').innerHTML=cs.map(c=>`<div><span>${ICO[c]?`<span class="material-symbols-rounded" style="font-size:18px">${ICO[c]}</span> `:''}${c}</span><b>${fmt(byC[c])}</b></div>`).join('')+foodLine;
   document.getElementById('ms').innerHTML=DATA.filter(r=>r.monto==='').map(r=>`<li><b>${r.categoria} ${labL(r.fecha)}</b> — ${r.archivo}: ${r.nota}</li>`).join('')+
    '<li><b>Excluidos por ser de 2021:</b> “Agua enero.pdf” ($434.033) y “casa cuota 1.jpg” ($576.000); ~100 capturas antiguas (2019–2022) sin nombre descriptivo no se procesaron.</li>';
 
@@ -296,7 +360,52 @@ function start(ALL){
   }
   render();
 
-  // Alerta del mes calendario (America/Bogota) y análisis breve del mismo mes.
+  function renderAlimentacion(){
+    const empty=document.getElementById('food-empty');
+    const body=document.getElementById('food-body');
+    const years=[...new Set(FOOD.map(r=>r.anio))].sort();
+    if(!years.length){body.hidden=true;empty.hidden=false;return null;}
+    empty.hidden=true;body.hidden=false;
+    const foodYear=years[years.length-1];
+    const rows=FOOD.filter(r=>r.anio===foodYear);
+    const now=bogotaYM();
+    const perNow=now.year+'-'+String(now.month).padStart(2,'0');
+    const mesTotal=FOOD.filter(r=>r.periodo===perNow).reduce((s,r)=>s+r.total,0);
+    const yearTotal=rows.reduce((s,r)=>s+r.total,0);
+    document.getElementById('food-kpis').innerHTML=
+      `<div class="card kpi"><div class="l">Este mes</div><div class="v">${fmt(mesTotal)}</div><div class="s">${MES_L[now.month-1]} ${now.year}</div></div>`+
+      `<div class="card kpi"><div class="l">Año ${esc(foodYear)}</div><div class="v">${fmt(yearTotal)}</div><div class="s">${rows.length} factura${rows.length===1?'':'s'}</div></div>`;
+    const byP={};
+    rows.forEach(r=>{byP[r.periodo]=(byP[r.periodo]||0)+r.total;});
+    const keys=Object.keys(byP).sort();
+    const span=[];
+    const y0=keys[0].slice(0,4);
+    for(let m=+keys[0].slice(5);m<=+keys[keys.length-1].slice(5);m++) span.push(y0+'-'+String(m).padStart(2,'0'));
+    document.getElementById('food-chart-title').textContent='Gasto mensual · '+foodYear;
+    const chart=new Chart(document.getElementById('foodbar'),{type:'bar',data:{labels:span.map(lab),datasets:[{label:'Alimentación',data:span.map(m=>byP[m]||0),backgroundColor:dark?'#fb923c':'#ea580c',borderRadius:6}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:fmtK},beginAtZero:true},x:{grid:{display:false}}}}});
+    const chips=document.getElementById('food-months');
+    const chip=(v,t,on)=>`<button class="chip${on?' on':''}" data-v="${v}">${esc(t)}</button>`;
+    chips.innerHTML=chip('','Todos',1)+keys.map(m=>chip(m,MES_L[+m.slice(5)-1])).join('');
+    let fm='';
+    const listEl=document.getElementById('food-list');
+    const sumEl=document.getElementById('food-sum');
+    function renderList(){
+      const src=(fm?rows.filter(r=>r.periodo===fm):rows).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.comercio.localeCompare(b.comercio,'es'));
+      sumEl.textContent=src.length+' factura'+(src.length===1?'':'s')+' · '+fmt(src.reduce((s,r)=>s+r.total,0));
+      listEl.innerHTML=src.map(r=>{
+        const meta=esc(labDia(r.fecha))+(r.medio_pago?' · '+esc(r.medio_pago):'');
+        const nota=r.nota?`<div class="n">${esc(r.nota)}</div>`:'';
+        return `<div class="pay"><div class="ic" style="background:#ea580c"><span class="material-symbols-rounded" style="font-size:22px">shopping_cart</span></div><div class="md"><div class="t">${esc(r.comercio||'Compra')}</div><div class="f">${meta}</div>${nota}</div><div class="a">${fmt(r.total)}</div></div>`;
+      }).join('');
+    }
+    chips.onclick=e=>{const b=e.target.closest('.chip');if(!b)return;[...chips.children].forEach(x=>x.classList.toggle('on',x===b));fm=b.dataset.v;renderList();};
+    renderList();
+    return chart;
+  }
+  const foodChart=renderAlimentacion();
+
+  // Alerta del mes calendario (America/Bogota) y análisis breve del mismo mes. Los recibos de alimentación no entran aquí.
   const {year:yNow,month:mNow}=bogotaYM();
   const mesNombre=MES_L[mNow-1];
   const fechaNow=yNow+'-'+String(mNow).padStart(2,'0');
@@ -318,6 +427,10 @@ function start(ALL){
     toast.classList.add('warn');
   }
   document.getElementById('analisis-txt').textContent=textoAnalisis(DATA,yNow,mNow,fechaNow);
+  const foodTxt=textoAlimentacion(FOOD,yNow,mNow);
+  const foodEl=document.getElementById('analisis-food');
+  foodEl.hidden=!foodTxt;
+  foodEl.textContent=foodTxt;
 
   toast.classList.add('on');
   const fixToast=()=>placeToast(toast);
@@ -327,10 +440,13 @@ function start(ALL){
 
   // Tabs
   const nav=document.getElementById('nav');
+  const VIEWS=['resumen','graficas','pagos','alimentacion'];
   function show(v){document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id===v));[...nav.children].forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-    if(v==='graficas')charts.forEach(c=>c.resize());scrollTo({top:0});history.replaceState(null,'','#'+v);}
+    if(v==='graficas')charts.forEach(c=>c.resize());
+    if(v==='alimentacion'&&foodChart)foodChart.resize();
+    scrollTo({top:0});history.replaceState(null,'','#'+v);}
   nav.onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.v);};
-  show(['resumen','graficas','pagos'].includes(location.hash.slice(1))?location.hash.slice(1):'resumen');
+  show(VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'resumen');
 }
 load();
 </script>
