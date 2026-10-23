@@ -1474,5 +1474,25 @@
     "subtotal": 8270
    }
   ]
+ },
+ {
+  "fecha": "2026-10-23",
+  "anio": "2026",
+  "mes": 10,
+  "periodo": "2026-10",
+  "comercio": "Club Ganadero",
+  "total": 21200,
+  "medio_pago": "Transferencia",
+  "nota": "Comprobante de transferencia Bre-B a BOLD",
+  "items": [
+   {
+    "categoria": "Proteínas",
+    "producto": "COMPRA CARNICERÍA",
+    "cantidad": 1.0,
+    "unidad": "Und",
+    "precio_unit": 21200,
+    "subtotal": 21200
+   }
+  ]
  }
 ]
