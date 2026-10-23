@@ -313,6 +313,73 @@ REGLAS DE SEGURIDAD Y PRIVACIDAD OBLIGATORIAS:
         return {"ok": False, "error": f"Error al parsear respuesta: {str(e)}"}
 
 
+def extract_text_expense_with_agy(text: str) -> dict:
+    """Interpreta un gasto reportado en lenguaje natural por texto."""
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+    year_str = str(now.year)
+    month_int = now.month
+    period_str = now.strftime("%Y-%m")
+
+    prompt = f"""Interpreta el siguiente mensaje en español donde el usuario reporta un gasto personal o pago:
+"{text}"
+
+Fecha de referencia actual (si dice "hoy" o no especifica fecha): {today_str} (Año: {year_str}, Mes: {month_int}, Periodo: {period_str}).
+
+Clasifícalo en una de dos opciones:
+1. "alimentacion": compra de comida, mercado, almuerzo, restaurante, carnicería, panadería, cafetería, mecato, aseo del hogar.
+   - Comercio: Si menciona un lugar (ej. Crepes, D1, Éxito, Ara), usa ese nombre. Si no menciona lugar, usa una descripción adecuada como "Comida / Almuerzo (sin factura)" o "Mercado (sin factura)".
+   - Categoría de ítems: DEBE ser una de: ['Aseo/Hogar', 'Bebidas', 'Granos', 'Lácteos', 'Mecato', 'Proteínas', 'Verduras/Frutas'].
+     * Almuerzos preparados, carnes, pollo -> 'Proteínas'
+     * Snacks, dulces, galletas, café -> 'Mecato'
+     * Frutas, verduras -> 'Verduras/Frutas'
+     * Aseo -> 'Aseo/Hogar'
+   - Genera 1 ítem con el monto total.
+   - Nota: agrega "(Sin factura)" o el detalle mencionado.
+
+2. "servicio": servicios públicos (Luz, Agua, Gas, Claro), cuota apto, administración, impuestos (DIAN, predial), seguro moto, libranza.
+   - Categoría: DEBE ser una de: ['Administración', 'Agua', 'Claro', 'Cuota apto', 'DIAN', 'Gas', 'Impuesto predial', 'Libranza', 'Luz', 'Seguro moto'].
+   - Archivo: dejar en blanco "".
+   - Nota: medio de pago o detalle sin datos sensibles (ej. "Pagado por Nequi sin factura").
+
+REGLAS DE SEGURIDAD Y PRIVACIDAD OBLIGATORIAS:
+- El repositorio de GitHub es PÚBLICO.
+- NUNCA incluyas números de cédula, direcciones exactas ni números de cuenta.
+
+Devuelve SOLAMENTE el objeto JSON con este formato:
+{{
+  "tipo": "alimentacion" o "servicio",
+  "data": {{ ... }}
+}}
+Si el mensaje NO describe ningún gasto o monto, devuelve {{"tipo": "desconocido"}}.
+Responde ÚNICAMENTE con el objeto JSON válido. Sin explicaciones, sin texto adicional."""
+
+    cmd = [AGY_BIN, "-p", prompt, "--model", "gemini-3.8-flash-medium"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        output = res.stdout.strip()
+        if not output:
+            output = res.stderr.strip()
+
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", output, re.DOTALL)
+        if match:
+            json_str = match.group(1)
+        else:
+            json_start = output.find("{")
+            json_end = output.rfind("}")
+            if json_start != -1 and json_end != -1:
+                json_str = output[json_start:json_end+1]
+            else:
+                json_str = output
+
+        data = json.loads(json_str)
+        return {"ok": True, "result": data}
+    except Exception as e:
+        logger.error(f"Error parseando gasto de texto con agy: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+
 def check_duplicates(extracted_type: str, data: dict) -> tuple[bool, str]:
     """Comprueba si ya existe un registro con el mismo comercio/categoría, fecha y monto."""
     if extracted_type == "alimentacion":
@@ -552,7 +619,7 @@ def commit_and_push(extracted_type: str, data: dict, original_file: Path) -> tup
                 data.get("categoria", ""),
                 str(float(data.get("monto", 0))),
                 data.get("estado", "ok"),
-                original_file.name if original_file else "",
+                original_file.name if (original_file and hasattr(original_file, "name")) else "",
                 sanitize_text(data.get("nota", ""))
             ]
 
@@ -731,7 +798,8 @@ def handle_callback_query(cq: dict):
 
         extracted_type = pending_item["tipo"]
         data = pending_item["data"]
-        file_path = Path(pending_item["filepath"])
+        fp_str = pending_item.get("filepath")
+        file_path = Path(fp_str) if fp_str else None
 
         success, msg_result, rec_num = commit_and_push(extracted_type, data, file_path)
 
@@ -743,7 +811,7 @@ def handle_callback_query(cq: dict):
             "comercio": data.get("comercio") or data.get("categoria"),
             "fecha": data.get("fecha"),
             "total": data.get("total") or data.get("monto"),
-            "filepath": str(file_path)
+            "filepath": str(file_path) if file_path else ""
         })
 
         # Eliminar de pendientes
@@ -755,7 +823,11 @@ def handle_callback_query(cq: dict):
         # Generar análisis
         analysis = generate_analysis(extracted_type, data)
 
-        final_msg = f"{msg_result}\n\n📌 Guardado como registro *#{history_id}*. Puedes consultar la imagen original con `/ver {history_id}`."
+        if file_path:
+            final_msg = f"{msg_result}\n\n📌 Guardado como registro *#{history_id}*. Puedes consultar la imagen original con `/ver {history_id}`."
+        else:
+            final_msg = f"{msg_result}\n\n📌 Guardado como registro *#{history_id}* (reportado por texto)."
+
         if analysis:
             final_msg += f"\n\n{analysis}"
 
@@ -771,8 +843,12 @@ def handle_text_message(message: dict):
     if text.startswith("/start") or text.startswith("/ayuda") or text.lower() == "hola":
         help_msg = (
             "👋 ¡Hola Yoseth! Soy @Facundo1bot.\n\n"
-            "📸 *¿Cómo registrar un gasto?*\n"
-            "Solo envíame una foto o PDF de tu factura o recibo. Yo la leeré con visión, verificaré los totales y te pediré confirmación.\n\n"
+            "🧾 *¿Cómo registrar un gasto?*\n"
+            "• *Con factura:* Envíame una foto o PDF del recibo.\n"
+            "• *Por texto directo:* Escríbeme lo que gastaste, por ejemplo:\n"
+            "  - `Hoy gasté 45000 en comida`\n"
+            "  - `Almuerzo en Crepes 35000 con tarjeta`\n"
+            "  - `Pagué 180000 de Luz por Nequi`\n\n"
             "📋 *Comandos disponibles:*\n"
             "• `/resumen`: Compara tus gastos del mes actual vs. el anterior.\n"
             "• `/ver <n>`: Te reenvía la foto o documento de la factura #n.\n"
@@ -835,6 +911,10 @@ def handle_text_message(message: dict):
             target = next((item for item in history if item["id"] == rec_id), None)
             if not target:
                 bot.send_message(chat_id, f"❌ No encontré ninguna factura con el número #{rec_id}.")
+                return
+
+            if not target.get("filepath"):
+                bot.send_message(chat_id, f"ℹ️ El registro #{rec_id} ({target.get('comercio')}) fue reportado por texto (sin factura física/archivo adjunto).")
                 return
 
             fpath = Path(target["filepath"])
@@ -926,8 +1006,62 @@ def handle_text_message(message: dict):
             bot.send_message(chat_id, f"✅ *Campos actualizados ({', '.join(updated_fields)}):*\n\n{preview_text}", reply_markup=reply_markup)
             return
 
-    # Mensaje normal no reconocido
-    bot.send_message(chat_id, "ℹ️ Envíame una foto o PDF de una factura para registrarla, o usa `/resumen` para ver el balance mensual.")
+    # Interpretar gasto en lenguaje natural (ej. "Hoy gasté 45000 en comida")
+    has_digits = bool(re.search(r"\d+", text))
+    has_keywords = any(w in text.lower() for w in [
+        "gasto", "gaste", "gasté", "pago", "pague", "pagué", "compre", "compré",
+        "almuerzo", "cena", "desayuno", "mercado", "luz", "agua", "gas", "claro",
+        "dian", "predial", "comida", "compra", "plata", "$"
+    ])
+
+    if has_digits or has_keywords:
+        status_msg = bot.send_message(chat_id, "🔍 *Interpretando gasto...*")
+        status_id = status_msg.get("result", {}).get("message_id")
+        bot.send_action(chat_id, "typing")
+
+        extracted = extract_text_expense_with_agy(text)
+        if extracted.get("ok"):
+            payload = extracted["result"]
+            extracted_type = payload.get("tipo", "alimentacion")
+            if extracted_type in ["alimentacion", "servicio"]:
+                data = payload.get("data", {})
+                if "nota" in data:
+                    data["nota"] = sanitize_text(data["nota"])
+
+                math_ok, math_msg = check_math(extracted_type, data)
+                dup_found, dup_msg = check_duplicates(extracted_type, data)
+
+                item_id = str(int(time.time()))
+                state.data["pending"][item_id] = {
+                    "tipo": extracted_type,
+                    "data": data,
+                    "filepath": "",
+                    "math_msg": math_msg,
+                    "dup_msg": dup_msg,
+                    "created_at": time.time()
+                }
+                state.save()
+
+                preview_text, reply_markup = format_preview(item_id, extracted_type, data, math_msg, dup_msg)
+                bot.edit_message(chat_id, status_id, preview_text, reply_markup=reply_markup)
+                return
+
+        bot.edit_message(
+            chat_id,
+            status_id,
+            "ℹ️ No pude interpretar con certeza el monto o tipo de gasto.\n\n"
+            "Puedes escribírmelo así:\n"
+            "• `Hoy gasté 45000 en comida`\n"
+            "• `Pagué 180000 de Luz por Nequi`\n"
+            "• `Mercado D1 85000 con tarjeta`"
+        )
+        return
+
+    # Mensaje informativo
+    bot.send_message(
+        chat_id,
+        "ℹ️ Envíame una foto o PDF de una factura, o escríbeme directamente tu gasto (ej: *'Hoy gasté 45000 en comida'*). También puedes usar `/resumen`."
+    )
 
 
 def main():
