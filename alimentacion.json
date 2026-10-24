@@ -1494,5 +1494,41 @@
     "subtotal": 21200
    }
   ]
+ },
+ {
+  "fecha": "2026-10-24",
+  "anio": "2026",
+  "mes": 10,
+  "periodo": "2026-10",
+  "comercio": "Megachorizos",
+  "total": 73420,
+  "medio_pago": "Tarjeta",
+  "nota": "",
+  "items": [
+   {
+    "categoria": "Proteínas",
+    "producto": "PERNIL DE CERDO AHUMADO TAJADO 1000G",
+    "cantidad": 1.0,
+    "unidad": "Kg",
+    "precio_unit": 26350,
+    "subtotal": 26350
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "PANCETA DE CERDO VARIABLE",
+    "cantidad": 1.07,
+    "unidad": "Kg",
+    "precio_unit": 27000,
+    "subtotal": 28890
+   },
+   {
+    "categoria": "Proteínas",
+    "producto": "LOMO DE CERDO VARIABLE",
+    "cantidad": 1.01,
+    "unidad": "Kg",
+    "precio_unit": 18000,
+    "subtotal": 18180
+   }
+  ]
  }
 ]
