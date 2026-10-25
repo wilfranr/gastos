@@ -15,9 +15,13 @@ import shutil
 import logging
 import subprocess
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from collections import defaultdict
 import requests
+
+import gmail_ingest
+import gastos_api
 
 # Configuración de Logging
 logging.basicConfig(
@@ -49,6 +53,12 @@ CATEGORIAS_SERVICIOS = [
     "Impuesto predial", "Libranza", "Luz", "Seguro moto"
 ]
 
+CATEGORIAS_PERSONAL_GASTO = [
+    "Transporte", "Salud", "Ocio y salidas", "Ropa y cuidado personal", "Educación",
+    "Hogar y mantenimiento", "Regalos y familia", "Préstamos y deudas", "Comisiones", "Otros gastos"
+]
+CATEGORIAS_PERSONAL_INGRESO = ["Salario", "Trabajo independiente", "Reembolsos", "Otros ingresos"]
+
 MESES_ES = [
     "", "enero", "febrero", "marzo", "abril", "mayo", "junio",
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
@@ -70,6 +80,11 @@ def load_env():
 ENV_VARS = load_env()
 BOT_TOKEN = ENV_VARS.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = ENV_VARS.get("TELEGRAM_CHAT_ID")
+GASTOS_API_URL = ENV_VARS.get("GASTOS_API_URL")
+GASTOS_API_TOKEN = ENV_VARS.get("GASTOS_API_TOKEN")
+# Fuente de verdad: MySQL (gastos-app). LEGACY_PAGES_SYNC=true vuelve al modo anterior (archivos + git push a Pages).
+LEGACY_PAGES_SYNC = ENV_VARS.get("LEGACY_PAGES_SYNC", "false").lower() == "true"
+USE_DB = bool(GASTOS_API_URL and GASTOS_API_TOKEN) and not LEGACY_PAGES_SYNC
 
 if not BOT_TOKEN:
     logger.error("TELEGRAM_BOT_TOKEN no encontrado en .env")
@@ -217,6 +232,20 @@ class TelegramClient:
 bot = TelegramClient(BOT_TOKEN)
 
 
+def get_pagos() -> list:
+    """Pagos de servicios con la forma de data.json (fecha=periodo, monto='' si falta)."""
+    if USE_DB:
+        return gastos_api.list_pagos(GASTOS_API_URL, GASTOS_API_TOKEN)
+    return json.loads(DATA_JSON_FILE.read_text(encoding="utf-8")) if DATA_JSON_FILE.exists() else []
+
+
+def get_compras() -> list:
+    """Compras de alimentación con la forma de alimentacion.json."""
+    if USE_DB:
+        return gastos_api.list_compras(GASTOS_API_URL, GASTOS_API_TOKEN)
+    return json.loads(ALIMENTACION_FILE.read_text(encoding="utf-8")) if ALIMENTACION_FILE.exists() else []
+
+
 def sanitize_text(text: str) -> str:
     """Oculta cédulas, números de cliente/cuenta largos o direcciones si aparecen."""
     if not text:
@@ -228,11 +257,12 @@ def sanitize_text(text: str) -> str:
     return text
 
 
-def extract_with_agy(file_path: Path) -> dict:
+def extract_with_agy(file_path: Path, extra: str = "") -> dict:
     """Ejecuta agy para analizar la factura/comprobante con visión."""
     prompt = f"""Lee detenidamente el archivo de factura o comprobante en:
 {file_path}
 utilizando tu herramienta de lectura de archivos.
+{extra}
 
 Clasifícalo en una de dos opciones:
 1. "alimentacion": compra de supermercado, mercado, carnicería, panadería, comida, aseo del hogar (ej. Éxito, D1, Surtimayorista, Ara, Oxxo, Carnes Frías, etc.).
@@ -326,7 +356,7 @@ def extract_text_expense_with_agy(text: str) -> dict:
 
 Fecha de referencia actual (si dice "hoy" o no especifica fecha): {today_str} (Año: {year_str}, Mes: {month_int}, Periodo: {period_str}).
 
-Clasifícalo en una de dos opciones:
+Clasifícalo en una de tres opciones:
 1. "alimentacion": compra de comida, mercado, almuerzo, restaurante, carnicería, panadería, cafetería, mecato, aseo del hogar.
    - Comercio: Si menciona un lugar (ej. Crepes, D1, Éxito, Ara), usa ese nombre. Si no menciona lugar, usa una descripción adecuada como "Comida / Almuerzo (sin factura)" o "Mercado (sin factura)".
    - Categoría de ítems: DEBE ser una de: ['Aseo/Hogar', 'Bebidas', 'Granos', 'Lácteos', 'Mecato', 'Proteínas', 'Verduras/Frutas'].
@@ -342,13 +372,17 @@ Clasifícalo en una de dos opciones:
    - Archivo: dejar en blanco "".
    - Nota: medio de pago o detalle sin datos sensibles (ej. "Pagado por Nequi sin factura").
 
+3. "personal": gasto o ingreso personal que NO es comida ni un recibo del hogar (taxi, bus, médico, farmacia, cine, ropa, peluquería, regalo, préstamo, curso, comisión) o plata recibida (me pagaron, me consignaron, recibí un reembolso).
+   - Esquema de "data": {{"tipo": "gasto" o "ingreso", "categoria": una de {CATEGORIAS_PERSONAL_GASTO} si es gasto, o de {CATEGORIAS_PERSONAL_INGRESO} si es ingreso (o null si no estás seguro), "monto": 12000, "fecha": "YYYY-MM-DD", "contraparte": "persona o lugar si lo menciona, si no vacío", "medio": "Efectivo" o "Nequi" o "Tarjeta" o "", "nota": "detalle breve"}}
+   - Transporte: taxi, uber, bus, gasolina, peaje. Salud: médico, droga, farmacia, odontología. Ocio y salidas: cine, bar, paseo. Ropa y cuidado personal: ropa, peluquería, barbería.
+
 REGLAS DE SEGURIDAD Y PRIVACIDAD OBLIGATORIAS:
-- El repositorio de GitHub es PÚBLICO.
-- NUNCA incluyas números de cédula, direcciones exactas ni números de cuenta.
+- Los datos de "personal" NO se publican (van a una base privada); aun así no incluyas cédulas ni números de cuenta.
+- Para "alimentacion" y "servicio" el repositorio de GitHub es PÚBLICO: NUNCA incluyas cédulas, direcciones exactas ni números de cuenta.
 
 Devuelve SOLAMENTE el objeto JSON con este formato:
 {{
-  "tipo": "alimentacion" o "servicio",
+  "tipo": "alimentacion" o "servicio" o "personal",
   "data": {{ ... }}
 }}
 Si el mensaje NO describe ningún gasto o monto, devuelve {{"tipo": "desconocido"}}.
@@ -380,33 +414,50 @@ Responde ÚNICAMENTE con el objeto JSON válido. Sin explicaciones, sin texto ad
 
 
 
-def check_duplicates(extracted_type: str, data: dict) -> tuple[bool, str]:
+def check_duplicates(extracted_type: str, data: dict, tolerance: int = 1) -> tuple[bool, str]:
     """Comprueba si ya existe un registro con el mismo comercio/categoría, fecha y monto."""
     if extracted_type == "alimentacion":
-        if ALIMENTACION_FILE.exists():
+        if USE_DB or ALIMENTACION_FILE.exists():
             try:
-                records = json.loads(ALIMENTACION_FILE.read_text(encoding="utf-8"))
+                records = get_compras()
                 for r in records:
                     same_com = r.get("comercio", "").strip().lower() == data.get("comercio", "").strip().lower()
                     same_fecha = r.get("fecha") == data.get("fecha")
                     same_total = abs(float(r.get("total", 0)) - float(data.get("total", 0))) < 1
                     if same_com and same_fecha and same_total:
-                        return True, f"⚠️ *Aviso de duplicado:* Ya existe una compra de *{r.get('comercio')}* del *{r.get('fecha')}* por *${r.get('total'):,d}*."
+                        return True, f"⚠️ *Aviso de duplicado:* Ya existe una compra de *{r.get('comercio')}* del *{r.get('fecha')}* por *${float(r.get('total', 0)):,.0f}*."
             except Exception as e:
-                logger.warning(f"Error leyendo alimentacion.json para duplicados: {e}")
+                logger.warning(f"Error leyendo compras para duplicados: {e}")
     elif extracted_type == "servicio":
-        if GASTOS_CSV_FILE.exists():
+        if USE_DB or GASTOS_CSV_FILE.exists():
+            def _mi(p):
+                try:
+                    y, m = str(p).split("-")[:2]
+                    return int(y) * 12 + int(m)
+                except Exception:
+                    return None
             try:
-                with open(GASTOS_CSV_FILE, newline="", encoding="utf-8") as f:
-                    for row in csv.DictReader(f):
-                        same_cat = row.get("categoria", "").strip().lower() == data.get("categoria", "").strip().lower()
-                        same_fecha = row.get("fecha") == data.get("fecha")
-                        row_monto = float(row.get("monto", 0)) if row.get("monto") else 0
-                        same_monto = abs(row_monto - float(data.get("monto", 0))) < 1
-                        if same_cat and same_fecha and same_monto:
-                            return True, f"⚠️ *Aviso de duplicado:* Ya existe un pago de *{row.get('categoria')}* del periodo *{row.get('fecha')}* por *${row_monto:,.0f}*."
+                new_mi = _mi(data.get("fecha"))
+                new_monto = float(data.get("monto", 0))
+                for row in get_pagos():
+                    if row.get("categoria", "").strip().lower() != data.get("categoria", "").strip().lower():
+                        continue
+                    row_monto = float(row.get("monto", 0)) if row.get("monto") else 0
+                    row_mi = _mi(row.get("fecha"))
+                    # Mismo monto en el mismo mes o en un mes contiguo: factura vs. mes de pago
+                    close = new_mi is not None and row_mi is not None and abs(new_mi - row_mi) <= tolerance
+                    if close and abs(row_monto - new_monto) < 1:
+                        return True, f"⚠️ *Posible duplicado:* ya tienes un pago de *{row.get('categoria')}* por *${row_monto:,.0f}* registrado en *{row.get('fecha')}* (este es del periodo {data.get('fecha')})."
             except Exception as e:
-                logger.warning(f"Error leyendo gastos.csv para duplicados: {e}")
+                logger.warning(f"Error leyendo pagos para duplicados: {e}")
+    elif extracted_type == "personal" and GASTOS_API_URL and GASTOS_API_TOKEN:
+        try:
+            for m in gastos_api.list_movimientos(GASTOS_API_URL, GASTOS_API_TOKEN):
+                if (m["fecha"] == data.get("fecha") and m["tipo"] == data.get("tipo")
+                        and abs(float(m["monto"]) - float(data.get("monto", 0))) < 1):
+                    return True, f"⚠️ *Posible duplicado:* ya hay un movimiento de *${float(m['monto']):,.0f}* ese día ({m['origen']})."
+        except Exception as e:
+            logger.warning(f"No pude revisar duplicados personales: {e}")
     return False, ""
 
 
@@ -460,6 +511,19 @@ def format_preview(item_id: str, extracted_type: str, data: dict, math_msg: str,
             if len(items) > 8:
                 lines.append(f"  _...y {len(items) - 8} ítems más._")
 
+    elif extracted_type == "personal":
+        es_ingreso = data.get("tipo") == "ingreso"
+        lines.append(f"{'💵 *Ingreso personal*' if es_ingreso else '🧍 *Gasto personal*'}\n")
+        lines.append(f"🏷️ *Categoría:* {data.get('categoria') or 'Sin categoría (la eliges luego en el dashboard)'}")
+        lines.append(f"📅 *Fecha:* {data.get('fecha', '')}")
+        lines.append(f"💰 *Monto:* *${float(data.get('monto', 0)):,.0f}*")
+        if data.get("contraparte"):
+            lines.append(f"👤 *Con:* {md_safe(data['contraparte'])}")
+        if data.get("medio"):
+            lines.append(f"💳 *Medio:* {data['medio']}")
+        if data.get("nota"):
+            lines.append(f"📝 *Nota:* {sanitize_text(data['nota'])}")
+        lines.append("\n🔒 _Se guarda solo en tu base privada, no en GitHub._")
     else:
         cat = data.get("categoria", "Servicio")
         fecha = data.get("fecha", "")
@@ -478,7 +542,7 @@ def format_preview(item_id: str, extracted_type: str, data: dict, math_msg: str,
     if dup_msg:
         lines.append(f"\n{dup_msg}")
 
-    lines.append("\n¿Deseas confirmar y publicar este registro?")
+    lines.append("\n¿Deseas confirmar y guardar este registro?" if extracted_type == "personal" else "\n¿Deseas confirmar y publicar este registro?")
 
     reply_markup = {
         "inline_keyboard": [
@@ -497,9 +561,9 @@ def generate_analysis(extracted_type: str, current_data: dict) -> str:
     lines = ["📊 *Análisis de impacto en tus gastos:*"]
     try:
         if extracted_type == "alimentacion":
-            if not ALIMENTACION_FILE.exists():
+            records = get_compras()
+            if not records:
                 return ""
-            records = json.loads(ALIMENTACION_FILE.read_text(encoding="utf-8"))
             periodo_actual = current_data.get("periodo", "")
 
             # Agrupar por periodo
@@ -551,9 +615,9 @@ def generate_analysis(extracted_type: str, current_data: dict) -> str:
                     lines.append(f"🔻 *Bajaron:* {', '.join(bajaron[:3])}")
 
         elif extracted_type == "servicio":
-            if not DATA_JSON_FILE.exists():
+            records = get_pagos()
+            if not records:
                 return ""
-            records = json.loads(DATA_JSON_FILE.read_text(encoding="utf-8"))
             cat = current_data.get("categoria", "")
             periodo_actual = current_data.get("fecha", "")
 
@@ -561,6 +625,13 @@ def generate_analysis(extracted_type: str, current_data: dict) -> str:
             cat_history.sort(key=lambda x: x.get("fecha", ""))
 
             lines.append(f"• *Pago registrado para {cat}:* ${float(current_data.get('monto', 0)):,.0f}")
+            prev_montos = [float(r["monto"]) for r in cat_history if r.get("monto") and r.get("fecha") != periodo_actual][-3:]
+            if len(prev_montos) >= 2:
+                prom = sum(prev_montos) / len(prev_montos)
+                m_now = float(current_data.get("monto", 0))
+                if prom > 0 and abs(m_now - prom) / prom > 0.25:
+                    arrow = "🔺 por encima" if m_now > prom else "🔻 por debajo"
+                    lines.append(f"⚠️ *Fuera de lo normal:* {arrow} de tu promedio reciente (${prom:,.0f}) en {abs(m_now - prom) / prom * 100:.0f}%.")
             if len(cat_history) >= 2:
                 ant = cat_history[-2]
                 m_ant = float(ant.get("monto", 0)) if ant.get("monto") else 0
@@ -570,13 +641,72 @@ def generate_analysis(extracted_type: str, current_data: dict) -> str:
                 sign = "+" if diff > 0 else ""
                 lines.append(f"• *vs. periodo anterior ({ant.get('fecha')}):* ${m_ant:,.0f} ({sign}${diff:,.0f} / {sign}{pct:.1f}%)")
 
+        elif extracted_type == "personal" and GASTOS_API_URL and GASTOS_API_TOKEN:
+            per = str(current_data.get("fecha", ""))[:7]
+            movs = [m for m in gastos_api.list_movimientos(GASTOS_API_URL, GASTOS_API_TOKEN) if m["periodo"] == per]
+            gasto = sum(m["monto"] for m in movs if m["tipo"] == "gasto")
+            ingreso = sum(m["monto"] for m in movs if m["tipo"] == "ingreso")
+            lines.append(f"• *Personal en {per}:* gastos ${gasto:,.0f} · ingresos ${ingreso:,.0f} · balance ${ingreso - gasto:+,.0f}")
+            cat = current_data.get("categoria")
+            if cat:
+                lines.append(f"• *{cat} en {per}:* ${sum(m['monto'] for m in movs if m['categoria'] == cat and m['tipo'] == 'gasto'):,.0f}")
+
     except Exception as e:
         logger.warning(f"Error generando análisis: {e}")
     return "\n".join(lines)
 
 
+def mirror_to_api(extracted_type: str, data: dict, original_file) -> None:
+    """Copia el registro a MySQL (gastos-app). Fase de transición: los archivos siguen siendo la fuente."""
+    if not (GASTOS_API_URL and GASTOS_API_TOKEN):
+        return
+    try:
+        archivo = original_file.name if (original_file and hasattr(original_file, "name")) else ""
+        rec_id = gastos_api.push_record(GASTOS_API_URL, GASTOS_API_TOKEN, extracted_type, data, archivo)
+        logger.info(f"Espejo en MySQL OK ({extracted_type} id={rec_id})")
+    except Exception as e:
+        # No frena el flujo: los archivos ya están guardados y se puede resincronizar con migrate_legacy.
+        logger.error(f"Espejo en MySQL falló ({extracted_type}): {e}")
+
+
+def commit_personal(data: dict) -> tuple[bool, str, int]:
+    """Gasto/ingreso personal: va SOLO a la base privada. Nunca toca git ni el repo público."""
+    if not (GASTOS_API_URL and GASTOS_API_TOKEN):
+        return False, "❌ La base privada no está configurada; no guardé nada.", 0
+    try:
+        hoy = datetime.now(TZ_LOCAL)
+        fecha = data.get("fecha") or hoy.strftime("%Y-%m-%d")
+        ocurrido = hoy.strftime("%Y-%m-%dT%H:%M:00") if fecha == hoy.strftime("%Y-%m-%d") else f"{fecha}T12:00:00"
+        res = gastos_api.push_movimiento(GASTOS_API_URL, GASTOS_API_TOKEN, {
+            "ocurrido": ocurrido, "tipo": data.get("tipo", "gasto"), "categoria": data.get("categoria"),
+            "monto": float(data.get("monto", 0)), "contraparte": data.get("contraparte", ""),
+            "medio": data.get("medio", ""), "nota": sanitize_text(data.get("nota", "")), "origen": "texto",
+        })
+        return True, "✅ Guardado en tu base privada (no se publica en GitHub).", res["id"]
+    except Exception as e:
+        logger.error(f"Error guardando movimiento personal: {e}")
+        return False, f"❌ No pude guardar el movimiento: {e}", 0
+
+
+def commit_to_db(extracted_type: str, data: dict, original_file) -> tuple[bool, str, int]:
+    """Guarda un recibo o compra en MySQL (fuente de verdad). No toca archivos ni git."""
+    try:
+        archivo = original_file.name if (original_file and hasattr(original_file, "name")) else ""
+        if "nota" in data:
+            data["nota"] = sanitize_text(data["nota"])
+        rec_id = gastos_api.push_record(GASTOS_API_URL, GASTOS_API_TOKEN, extracted_type, data, archivo)
+        return True, "✅ Guardado en tu base de datos. Ya aparece en el dashboard.", rec_id
+    except Exception as e:
+        logger.error(f"Error guardando en MySQL: {e}")
+        return False, f"❌ No pude guardar el registro (¿la base de datos está arriba?): {e}", 0
+
+
 def commit_and_push(extracted_type: str, data: dict, original_file: Path) -> tuple[bool, str, int]:
-    """Guarda en JSON o CSV, ejecuta build.py si aplica, valida, comitea y pushea a git."""
+    """Modo normal: guarda en MySQL. Modo legado (LEGACY_PAGES_SYNC): JSON/CSV + build.py + git push."""
+    if extracted_type == "personal":
+        return commit_personal(data)
+    if USE_DB:
+        return commit_to_db(extracted_type, data, original_file)
     try:
         commit_msg = ""
         files_to_commit = []
@@ -651,6 +781,8 @@ def commit_and_push(extracted_type: str, data: dict, original_file: Path) -> tup
             except Exception:
                 periodo_texto = data.get("fecha", "")
             commit_msg = f"Agrega el pago de {cat} de {periodo_texto}."
+
+        mirror_to_api(extracted_type, data, original_file)
 
         # Git add & commit
         subprocess.run(["git", "add"] + files_to_commit, cwd=REPO_DIR, check=True)
@@ -808,7 +940,7 @@ def handle_callback_query(cq: dict):
         state.data.setdefault("invoice_history", []).append({
             "id": history_id,
             "tipo": extracted_type,
-            "comercio": data.get("comercio") or data.get("categoria"),
+            "comercio": data.get("comercio") or data.get("categoria") or data.get("contraparte") or "Personal",
             "fecha": data.get("fecha"),
             "total": data.get("total") or data.get("monto"),
             "filepath": str(file_path) if file_path else ""
@@ -852,9 +984,19 @@ def handle_text_message(message: dict):
             "📋 *Comandos disponibles:*\n"
             "• `/resumen`: Compara tus gastos del mes actual vs. el anterior.\n"
             "• `/ver <n>`: Te reenvía la foto o documento de la factura #n.\n"
-            "• `/ver`: Muestra la lista de las últimas facturas guardadas."
+            "• `/ver`: Muestra la lista de las últimas facturas guardadas.\n"
+            "• `/recordar`: Ver/configurar recordatorios de pago (ej. `/recordar Luz 16`).\n"
+            "• `/correo`: Estado de la lectura automática de Gmail."
         )
         bot.send_message(chat_id, help_msg)
+        return
+
+    if text.startswith("/recordar"):
+        handle_recordar(chat_id, text)
+        return
+
+    if text.startswith("/correo"):
+        handle_correo(chat_id)
         return
 
     if text.startswith("/resumen"):
@@ -869,16 +1011,16 @@ def handle_text_message(message: dict):
         # Alimentación
         food_cur = 0
         food_prev = 0
-        if ALIMENTACION_FILE.exists():
-            records = json.loads(ALIMENTACION_FILE.read_text(encoding="utf-8"))
+        records = get_compras()
+        if records:
             food_cur = sum(float(r.get("total", 0)) for r in records if r.get("periodo") == cur_periodo)
             food_prev = sum(float(r.get("total", 0)) for r in records if r.get("periodo") == prev_periodo)
 
         # Servicios
         serv_cur = 0
         serv_prev = 0
-        if DATA_JSON_FILE.exists():
-            data_records = json.loads(DATA_JSON_FILE.read_text(encoding="utf-8"))
+        data_records = get_pagos()
+        if data_records:
             serv_cur = sum(float(r.get("monto", 0)) for r in data_records if r.get("fecha") == cur_periodo and r.get("monto"))
             serv_prev = sum(float(r.get("monto", 0)) for r in data_records if r.get("fecha") == prev_periodo and r.get("monto"))
 
@@ -987,6 +1129,12 @@ def handle_text_message(message: dict):
                 except Exception:
                     pass
                 updated_fields.append(f"fecha={v}")
+            elif "contraparte" in k or "persona" in k:
+                data["contraparte"] = v
+                updated_fields.append(f"contraparte={v}")
+            elif k == "tipo" and v.lower() in ("gasto", "ingreso"):
+                data["tipo"] = v.lower()
+                updated_fields.append(f"tipo={v.lower()}")
             elif "medio" in k:
                 data["medio_pago"] = v
                 updated_fields.append(f"medio_pago={v}")
@@ -1023,8 +1171,13 @@ def handle_text_message(message: dict):
         if extracted.get("ok"):
             payload = extracted["result"]
             extracted_type = payload.get("tipo", "alimentacion")
-            if extracted_type in ["alimentacion", "servicio"]:
+            if extracted_type in ["alimentacion", "servicio", "personal"]:
                 data = payload.get("data", {})
+                if extracted_type == "personal":
+                    data = normalize_personal(data)
+                    if not data:
+                        bot.edit_message(chat_id, status_id, "ℹ️ No entendí el monto. Prueba: `Taxi 12000` o `Me pagaron 500000`.")
+                        return
                 if "nota" in data:
                     data["nota"] = sanitize_text(data["nota"])
 
@@ -1064,6 +1217,305 @@ def handle_text_message(message: dict):
     )
 
 
+def normalize_personal(data: dict):
+    """Limpia lo que devuelve el modelo para un gasto/ingreso personal; None si no hay monto válido."""
+    try:
+        monto = float(data.get("monto", 0))
+    except (TypeError, ValueError):
+        return None
+    if monto <= 0:
+        return None
+    tipo = "ingreso" if str(data.get("tipo", "")).lower() == "ingreso" else "gasto"
+    validas = CATEGORIAS_PERSONAL_INGRESO if tipo == "ingreso" else CATEGORIAS_PERSONAL_GASTO
+    cat = data.get("categoria")
+    fecha = str(data.get("fecha") or "")
+    try:
+        datetime.strptime(fecha, "%Y-%m-%d")
+    except ValueError:
+        fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y-%m-%d")
+    return {"tipo": tipo, "categoria": cat if cat in validas else None, "monto": monto, "fecha": fecha,
+            "contraparte": sanitize_text(str(data.get("contraparte") or ""))[:120],
+            "medio": str(data.get("medio") or "")[:30], "nota": sanitize_text(str(data.get("nota") or ""))}
+
+
+# ---------------------------------------------------------------------------
+# Tareas programadas: lectura de Gmail y recordatorios de pago
+# Corren dentro del ciclo principal (un solo hilo), así no hay carreras con state.
+# ---------------------------------------------------------------------------
+
+GMAIL_USER = ENV_VARS.get("GMAIL_USER")
+GMAIL_PASS = ENV_VARS.get("GMAIL_APP_PASSWORD")
+GMAIL_DIR = FACTURAS_DIR / "gmail"
+GMAIL_MAX_PENDING = 5      # máximo de correos esperando tu confirmación; evita avalanchas
+GMAIL_IDLE_SECS = 300
+GMAIL_BUSY_SECS = 20       # mientras haya backlog, un correo cada ~20 s
+TZ_LOCAL = ZoneInfo("America/Bogota")
+DEFAULT_RECORDATORIOS = {"Luz": 16, "Gas": 5}   # únicos días que aparecían en las notas del histórico
+
+_next_run = {"gmail": 0.0, "reminders": 0.0}
+
+
+def md_safe(text: str) -> str:
+    """Quita caracteres que rompen el Markdown de Telegram."""
+    return re.sub(r"[_*`\[\]]", " ", text or "").strip()
+
+
+def gmail_pending_count() -> int:
+    return sum(1 for p in state.data["pending"].values() if p.get("origen") == "gmail")
+
+
+def import_nequi() -> str:
+    """Importa transferencias Bre-B de Nequi a la base privada (sin IA ni confirmación: formato fijo e idempotente)."""
+    if not (GASTOS_API_URL and GASTOS_API_TOKEN):
+        return "idle"
+    seen = set(state.data.setdefault("gmail_seen", []))
+    movs, skipped, more = gmail_ingest.fetch_bre_b(GMAIL_USER, GMAIL_PASS, seen, limit=40)
+    seen.update(skipped)
+    nuevos = failed = 0
+    for mov in movs:
+        try:
+            res = gastos_api.push_movimiento(GASTOS_API_URL, GASTOS_API_TOKEN, mov)
+        except Exception as e:
+            logger.error(f"Nequi: no pude guardar {mov['key']}: {e}")
+            failed += 1
+            break  # la API no responde; se reintenta en el próximo ciclo (los ya guardados no se duplican por 'ref')
+        seen.add(mov["key"])
+        if not res.get("duplicado"):
+            nuevos += 1
+    acum = state.data.setdefault("nequi_acum", {"nuevos": 0, "backlog": False})
+    acum["nuevos"] += nuevos
+    acum["backlog"] = acum["backlog"] or more
+    state.data["gmail_seen"] = sorted(seen)
+    if not more and not failed and acum["backlog"] and acum["nuevos"]:
+        bot.send_message(ALLOWED_CHAT_ID, f"💸 Importé *{acum['nuevos']}* movimientos de Nequi (Bre-B) a tu base privada. "
+                                           "Clasifícalos en el dashboard → *Personal*; la categoría se recuerda por persona.")
+        state.data["nequi_acum"] = {"nuevos": 0, "backlog": False}
+    state.save()
+    return "processed" if (more and not failed) else "idle"
+
+
+def gmail_tick() -> str:
+    """Procesa a lo sumo un correo nuevo. Devuelve 'processed' si hizo algo y puede haber más."""
+    if not (GMAIL_USER and GMAIL_PASS):
+        return "idle"
+    if import_nequi() == "processed":
+        return "processed"
+    if gmail_pending_count() >= GMAIL_MAX_PENDING:
+        return "idle"
+
+    seen = set(state.data.setdefault("gmail_seen", []))
+    cand, skipped = gmail_ingest.next_candidate(GMAIL_USER, GMAIL_PASS, seen, GMAIL_DIR)
+    if skipped:
+        seen.update(skipped)
+    if not cand:
+        state.data["gmail_seen"] = sorted(seen)
+        state.save()
+        return "idle"
+
+    key = cand["key"]
+    extra = (
+        "CONTEXTO: este archivo viene de un correo electrónico.\n"
+        f"Remitente: {cand['sender']}. Asunto: {cand['subject']}. Recibido: {cand['date']}.\n"
+        "Usa la fecha y el periodo reales del documento, no la fecha de recepción. "
+        "Si es un pago rechazado, publicidad, o no es un servicio/impuesto de la lista ni una compra de comida, "
+        'responde exactamente {"tipo": "desconocido"}.\n'
+    )
+    extracted = extract_with_agy(Path(cand["path"]), extra)
+
+    if not extracted.get("ok"):
+        fails = state.data.setdefault("gmail_fail", {})
+        fails[key] = fails.get(key, 0) + 1
+        logger.warning(f"Gmail {key}: extracción falló ({fails[key]}): {extracted.get('error')}")
+        if fails[key] >= 2:
+            seen.add(key)
+            bot.send_message(ALLOWED_CHAT_ID, f"⚠️ No pude leer el correo «{md_safe(cand['subject'])[:60]}» tras 2 intentos; lo omito.")
+        state.data["gmail_seen"] = sorted(seen)
+        state.save()
+        return "processed"
+
+    seen.add(key)
+    payload = extracted["result"]
+    extracted_type = payload.get("tipo")
+    data = payload.get("data", {}) or {}
+
+    valid = False
+    try:
+        if extracted_type == "servicio":
+            valid = float(data.get("monto", 0)) > 0 and data.get("categoria") in CATEGORIAS_SERVICIOS
+        elif extracted_type == "alimentacion":
+            valid = float(data.get("total", 0)) > 0
+    except (TypeError, ValueError):
+        valid = False
+
+    if not valid:
+        logger.info(f"Gmail {key}: omitido (tipo={extracted_type})")
+        state.data["gmail_seen"] = sorted(seen)
+        state.save()
+        return "processed"
+
+    if "nota" in data:
+        data["nota"] = sanitize_text(data["nota"])
+
+    # Mismo mes y mismo monto: ya está registrado (p. ej. con el método anterior); no molestar.
+    if check_duplicates(extracted_type, data, tolerance=0)[0]:
+        logger.info(f"Gmail {key}: duplicado exacto de {data.get('categoria') or data.get('comercio')}, omitido")
+        state.data["gmail_auto_skipped"] = state.data.get("gmail_auto_skipped", 0) + 1
+        state.data["gmail_seen"] = sorted(seen)
+        state.save()
+        return "processed"
+
+    math_ok, math_msg = check_math(extracted_type, data)
+    dup_found, dup_msg = check_duplicates(extracted_type, data)
+
+    item_id = f"g{int(time.time() * 1000)}"
+    state.data["pending"][item_id] = {
+        "tipo": extracted_type,
+        "data": data,
+        "filepath": cand["path"],
+        "math_msg": math_msg,
+        "dup_msg": dup_msg,
+        "created_at": time.time(),
+        "origen": "gmail",
+        "gmail_key": key,
+    }
+    state.data["gmail_seen"] = sorted(seen)
+    state.save()
+
+    preview_text, reply_markup = format_preview(item_id, extracted_type, data, math_msg, dup_msg)
+    header = f"📧 *Desde tu correo:* {md_safe(cand['sender'])[:40]} — {md_safe(cand['subject'])[:60]}\n\n"
+    bot.send_message(ALLOWED_CHAT_ID, header + preview_text, reply_markup=reply_markup)
+    return "processed"
+
+
+def _norm(s: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", s.lower()) if unicodedata.category(c) != "Mn")
+
+
+def match_categoria(name: str):
+    n = _norm(name.strip())
+    for c in CATEGORIAS_SERVICIOS:
+        if _norm(c) == n:
+            return c
+    return None
+
+
+def reminders_cfg() -> dict:
+    return state.data.setdefault("recordatorios", dict(DEFAULT_RECORDATORIOS))
+
+
+def reminders_tick():
+    """Una vez al día (desde las 8:00 Bogotá) avisa pagos mensuales próximos o sin registrar."""
+    now = datetime.now(TZ_LOCAL)
+    if now.hour < 8 or state.data.get("reminders_last_day") == now.strftime("%Y-%m-%d"):
+        return
+    state.data["reminders_last_day"] = now.strftime("%Y-%m-%d")
+    state.save()
+
+    records = get_pagos()
+    if not records:
+        return
+    periodo = now.strftime("%Y-%m")
+    last_dom = (datetime(now.year + (now.month == 12), now.month % 12 + 1, 1) - timedelta(days=1)).day
+
+    lines = []
+    for cat, day in sorted(reminders_cfg().items()):
+        if not day:
+            continue
+        due = min(int(day), last_dom)
+        if now.day not in (max(due - 2, 1), due):
+            continue
+        hist = sorted((r for r in records if r.get("categoria") == cat and r.get("monto")), key=lambda r: r["fecha"])
+        if any(r["fecha"] == periodo for r in hist):
+            continue  # ya está registrado este mes
+        when = "hoy" if now.day == due else f"en {due - now.day} día(s)"
+        txt = f"• *{cat}* suele vencer el día {due} ({when})."
+        if hist:
+            last = hist[-1]
+            txt += f" Último pago: ${float(last['monto']):,.0f} ({last['fecha']})."
+        lines.append(txt)
+
+    sin_cat = 0
+    if GASTOS_API_URL and GASTOS_API_TOKEN:
+        try:
+            sin_cat = sum(1 for m in gastos_api.list_movimientos(GASTOS_API_URL, GASTOS_API_TOKEN)
+                          if not m["categoria"] and m["tipo"] != "traslado")
+        except Exception as e:
+            logger.warning(f"No pude contar movimientos sin categoría: {e}")
+    if sin_cat:
+        lines.append(f"• Tienes *{sin_cat}* movimientos personales sin categoría (dashboard → Personal).")
+
+    if lines:
+        bot.send_message(ALLOWED_CHAT_ID, "🔔 *Recordatorio de pagos*\n\n" + "\n".join(lines) +
+                         "\n\nCuando pagues, envíame el comprobante o escríbeme el pago. Ajusta días con `/recordar`.")
+
+
+def run_scheduled_jobs():
+    now = time.time()
+    if now >= _next_run["gmail"]:
+        try:
+            result = gmail_tick()
+        except Exception as e:
+            logger.error(f"Error en tarea de Gmail: {e}")
+            result = "idle"
+        _next_run["gmail"] = now + (GMAIL_BUSY_SECS if result == "processed" else GMAIL_IDLE_SECS)
+    if now >= _next_run["reminders"]:
+        try:
+            reminders_tick()
+        except Exception as e:
+            logger.error(f"Error en recordatorios: {e}")
+        _next_run["reminders"] = now + 600
+
+
+def handle_recordar(chat_id: int, text: str):
+    """/recordar            -> lista
+       /recordar Luz 16     -> fija día de vencimiento
+       /recordar Luz off    -> desactiva"""
+    args = text.split()[1:]
+    cfg = reminders_cfg()
+    if not args:
+        lines = ["🔔 *Recordatorios de pago* (aviso 2 días antes y el día del vencimiento, si aún no registraste el pago)\n"]
+        for cat in CATEGORIAS_SERVICIOS:
+            d = cfg.get(cat)
+            lines.append(f"• {cat}: {'día ' + str(d) if d else '—'}")
+        lines.append("\nFija un día: `/recordar Luz 16`\nDesactiva: `/recordar Luz off`")
+        bot.send_message(chat_id, "\n".join(lines))
+        return
+    if len(args) < 2:
+        bot.send_message(chat_id, "Uso: `/recordar <categoría> <día 1-31 | off>`")
+        return
+    cat = match_categoria(" ".join(args[:-1]))
+    val = args[-1].lower()
+    if not cat:
+        bot.send_message(chat_id, "❌ Categoría no reconocida. Opciones: " + ", ".join(CATEGORIAS_SERVICIOS))
+        return
+    if val == "off":
+        cfg.pop(cat, None)
+        state.save()
+        bot.send_message(chat_id, f"🔕 Recordatorio de *{cat}* desactivado.")
+    elif val.isdigit() and 1 <= int(val) <= 31:
+        cfg[cat] = int(val)
+        state.save()
+        bot.send_message(chat_id, f"🔔 Listo: te aviso por *{cat}* el día {int(val)} de cada mes (y 2 días antes).")
+    else:
+        bot.send_message(chat_id, "❌ El día debe ser un número de 1 a 31, o `off`.")
+
+
+def handle_correo(chat_id: int):
+    seen = len(state.data.get("gmail_seen", []))
+    pend = gmail_pending_count()
+    if not (GMAIL_USER and GMAIL_PASS):
+        bot.send_message(chat_id, "ℹ️ Gmail no está configurado en `.env`.")
+        return
+    _next_run["gmail"] = 0.0
+    bot.send_message(
+        chat_id,
+        f"📧 *Lectura de Gmail*\n• Correos ya revisados: {seen}\n• Omitidos por ya estar registrados: {state.data.get('gmail_auto_skipped', 0)}\n• Esperando tu confirmación: {pend}/{GMAIL_MAX_PENDING}\n"
+        "Reviso etiquetas *Facturas* y *Pagos* (comprobantes de PSE, Claro Pay, Nequi y Wompi), uno cada ~20 s mientras haya pendientes por revisar."
+        + ("\n⏸️ Pausado hasta que confirmes o descartes los pendientes." if pend >= GMAIL_MAX_PENDING else "")
+    )
+
+
 def main():
     logger.info("Iniciando @Facundo1bot daemon...")
     logger.info(f"Escuchando únicamente mensajes de chat_id={ALLOWED_CHAT_ID}")
@@ -1099,6 +1551,8 @@ def main():
                     handle_callback_query(u["callback_query"])
 
                 state.save()
+
+            run_scheduled_jobs()
 
         except KeyboardInterrupt:
             logger.info("Deteniendo bot...")
