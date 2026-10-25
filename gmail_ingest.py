@@ -386,9 +386,22 @@ def parse_nequi_pago(subject: str, text: str, when=None):
             "ref": f"nequi-pago:{cus.group(1)}" if cus else None}
 
 
+def parse_arq_envio(subject: str, text: str, when=None):
+    """ARQ: «Enviaste X COP a <destinatario>» (pago o transferencia en pesos). El nombre llega enmascarado: «Clu*** Gan*** 75»."""
+    dest = re.search(r"Destinatario\s+(.+?)\s+Llave Bre-B", text)
+    monto = re.search(r"Monto enviado\s+([\d.,]+)\s*COP", text)
+    f = re.search(r"Fecha\s+(\d{2})/(\d{2})/(\d{4})\s+(\d{2}):(\d{2})", text)
+    if not (dest and monto and f):
+        return None
+    d, mo, y, hh, mm = f.groups()
+    return {"tipo": "gasto", "monto": _money(monto.group(1)), "contraparte": dest.group(1).strip()[:120], "categoria": None,
+            "medio": "ARQ", "nota": "Pago desde ARQ (Bre-B)", "ocurrido": _when24(y, mo, d, hh, mm), "recurrencia": None, "proximo": None}
+
+
 RECIBO_RULES += [
     {"folder": "[Gmail]/Todos", "from": "arqfinance", "imap_subject": "plan", "subject_has": ["ha sido renovado"], "parser": parse_arq_renovacion},
     {"folder": "Pagos", "from": "somos@nequi.com.co", "imap_subject": None, "subject_has": ["pago exitoso"], "parser": parse_nequi_pago, "key_prefix": "pago:"},
+    {"folder": "[Gmail]/Todos", "from": "arqfinance", "imap_subject": "Enviaste", "subject_has": ["enviaste"], "parser": parse_arq_envio, "key_prefix": "arqenv:"},
 ]
 
 

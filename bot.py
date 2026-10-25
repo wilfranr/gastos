@@ -1350,7 +1350,7 @@ def import_recibos() -> str:
             failed = True
             break
         seen.add(mov["key"])
-        if not res.get("duplicado"):
+        if not res.get("duplicado") and res.get("tipo") != "traslado":      # los traslados entre tus cuentas no merecen aviso
             nuevos.append(mov)
     state.data["gmail_seen"] = sorted(seen)
     acum = state.data.setdefault("recibos_acum", 0)
@@ -1361,6 +1361,9 @@ def import_recibos() -> str:
                 notificar("aviso", f"Importé {state.data['recibos_acum']} cobros de suscripciones y compras personales",
                           "Desde tu correo (Virgin, Google Play, Cinemark, ARQ, Nequi). Revísalos en el dashboard → Personal.")
             state.data["recibos_init"] = True
+            state.data["recibos_acum"] = 0
+        elif len(nuevos) > 3:                                              # varios de golpe: un solo aviso
+            notificar("aviso", f"Importé {len(nuevos)} movimientos nuevos desde tu correo", "Revísalos en el dashboard → Personal.")
             state.data["recibos_acum"] = 0
         else:
             for mov in nuevos:
