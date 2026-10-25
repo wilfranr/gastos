@@ -39,7 +39,7 @@ def push_record(base_url: str, token: str, extracted_type: str, data: dict, arch
 
 def push_movimiento(base_url: str, token: str, mov: dict) -> dict:
     """Envía un gasto/ingreso personal. Devuelve la respuesta de la API (id, duplicado, tipo, categoria)."""
-    payload = {k: mov[k] for k in ("ocurrido", "tipo", "monto", "contraparte", "medio", "banco", "nota", "origen", "ref", "categoria") if mov.get(k) not in (None, "")}
+    payload = {k: mov[k] for k in ("ocurrido", "tipo", "monto", "contraparte", "medio", "banco", "nota", "origen", "ref", "categoria", "recurrencia", "proximo") if mov.get(k) not in (None, "")}
     r = requests.post(
         f"{base_url.rstrip('/')}/api/movimientos", json=payload,
         headers={"Authorization": f"Bearer {token}"}, timeout=10,

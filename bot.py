@@ -55,7 +55,7 @@ CATEGORIAS_SERVICIOS = [
 
 CATEGORIAS_PERSONAL_GASTO = [
     "Transporte", "Salud", "Ocio y salidas", "Ropa y cuidado personal", "Educación",
-    "Hogar y mantenimiento", "Regalos y familia", "Préstamos y deudas", "Comisiones", "Otros gastos"
+    "Hogar y mantenimiento", "Regalos y familia", "Préstamos y deudas", "Suscripciones", "Comisiones", "Otros gastos"
 ]
 CATEGORIAS_PERSONAL_INGRESO = ["Salario", "Trabajo independiente", "Reembolsos", "Otros ingresos"]
 
@@ -374,7 +374,7 @@ Clasifícalo en una de tres opciones:
 
 3. "personal": gasto o ingreso personal que NO es comida ni un recibo del hogar (taxi, bus, médico, farmacia, cine, ropa, peluquería, regalo, préstamo, curso, comisión) o plata recibida (me pagaron, me consignaron, recibí un reembolso).
    - Esquema de "data": {{"tipo": "gasto" o "ingreso", "categoria": una de {CATEGORIAS_PERSONAL_GASTO} si es gasto, o de {CATEGORIAS_PERSONAL_INGRESO} si es ingreso (o null si no estás seguro), "monto": 12000, "fecha": "YYYY-MM-DD", "contraparte": "persona o lugar si lo menciona, si no vacío", "medio": "Efectivo" o "Nequi" o "Tarjeta" o "", "nota": "detalle breve"}}
-   - Transporte: taxi, uber, bus, gasolina, peaje. Salud: médico, droga, farmacia, odontología. Ocio y salidas: cine, bar, paseo. Ropa y cuidado personal: ropa, peluquería, barbería.
+   - Transporte: taxi, uber, bus, gasolina, peaje. Salud: médico, droga, farmacia, odontología. Ocio y salidas: cine, bar, paseo. Ropa y cuidado personal: ropa, peluquería, barbería. Suscripciones: Netflix, Spotify, plan de celular, apps o servicios que se renuevan cada mes o año.
 
 REGLAS DE SEGURIDAD Y PRIVACIDAD OBLIGATORIAS:
 - Los datos de "personal" NO se publican (van a una base privada); aun así no incluyas cédulas ni números de cuenta.
@@ -1294,11 +1294,63 @@ def import_nequi() -> str:
     return "processed" if (more and not failed) else "idle"
 
 
+def _fmt_prox(iso: str) -> str:
+    try:
+        d = datetime.strptime(iso[:10], "%Y-%m-%d")
+        return f"{d.day} de {MESES_ES[d.month]}"
+    except Exception:
+        return iso
+
+
+def import_recibos() -> str:
+    """Importa cobros de suscripciones y compras personales leídos del correo (formato fijo, sin IA)."""
+    if not (GASTOS_API_URL and GASTOS_API_TOKEN):
+        return "idle"
+    seen = set(state.data.setdefault("gmail_seen", []))
+    primera_vez = not state.data.get("recibos_init")
+    movs, skipped, more = gmail_ingest.fetch_recibos(GMAIL_USER, GMAIL_PASS, seen, limit=40)
+    seen.update(skipped)
+    nuevos, failed = [], False
+    for mov in movs:
+        try:
+            res = gastos_api.push_movimiento(GASTOS_API_URL, GASTOS_API_TOKEN, mov)
+        except Exception as e:
+            logger.error(f"Recibos: no pude guardar {mov['key']}: {e}")
+            failed = True
+            break
+        seen.add(mov["key"])
+        if not res.get("duplicado"):
+            nuevos.append(mov)
+    state.data["gmail_seen"] = sorted(seen)
+    acum = state.data.setdefault("recibos_acum", 0)
+    state.data["recibos_acum"] = acum + len(nuevos)
+    if not more and not failed:
+        if primera_vez:
+            if state.data["recibos_acum"]:
+                bot.send_message(ALLOWED_CHAT_ID, f"🔁 Importé *{state.data['recibos_acum']}* cobros de suscripciones y compras personales desde tu correo "
+                                                   "(Virgin, Google Play, Cinemark). Revísalos en el dashboard → *Personal*.")
+            state.data["recibos_init"] = True
+            state.data["recibos_acum"] = 0
+        else:
+            for mov in nuevos:
+                txt = f"🔁 *Cobro detectado:* {md_safe(mov['contraparte'])} ${mov['monto']:,.0f}"
+                if mov.get("categoria"):
+                    txt += f" ({mov['categoria']})"
+                if mov.get("proximo"):
+                    txt += f"\nPróximo cobro: {_fmt_prox(mov['proximo'])}"
+                bot.send_message(ALLOWED_CHAT_ID, txt)
+            state.data["recibos_acum"] = 0
+    state.save()
+    return "processed" if (more and not failed) else "idle"
+
+
 def gmail_tick() -> str:
     """Procesa a lo sumo un correo nuevo. Devuelve 'processed' si hizo algo y puede haber más."""
     if not (GMAIL_USER and GMAIL_PASS):
         return "idle"
     if import_nequi() == "processed":
+        return "processed"
+    if import_recibos() == "processed":
         return "processed"
     if gmail_pending_count() >= GMAIL_MAX_PENDING:
         return "idle"
@@ -1437,6 +1489,25 @@ def reminders_tick():
 
     sin_cat = 0
     if GASTOS_API_URL and GASTOS_API_TOKEN:
+        try:
+            movs = gastos_api.list_movimientos(GASTOS_API_URL, GASTOS_API_TOKEN)
+            hoy = now.date()
+            ultimos = {}
+            for m in sorted((m for m in movs if m["categoria"] == "Suscripciones" and m["tipo"] == "gasto"), key=lambda m: m["ocurrido"]):
+                ultimos[m["contraparte"]] = m
+            for nombre, m in ultimos.items():
+                if m.get("proximo"):
+                    prox = datetime.strptime(m["proximo"], "%Y-%m-%d").date()
+                else:
+                    base = datetime.strptime(m["fecha"], "%Y-%m-%d").date()
+                    meses = 12 if m.get("recurrencia") == "anual" else 1
+                    prox = base.replace(year=base.year + (base.month - 1 + meses) // 12, month=(base.month - 1 + meses) % 12 + 1, day=min(base.day, 28))
+                faltan = (prox - hoy).days
+                if 0 <= faltan <= 2:
+                    cuando = "hoy" if faltan == 0 else f"en {faltan} día(s)"
+                    lines.append(f"• *{md_safe(nombre)}* se renueva {cuando} (~${m['monto']:,.0f}).")
+        except Exception as e:
+            logger.warning(f"No pude calcular renovaciones: {e}")
         try:
             sin_cat = sum(1 for m in gastos_api.list_movimientos(GASTOS_API_URL, GASTOS_API_TOKEN)
                           if not m["categoria"] and m["tipo"] != "traslado")

@@ -239,3 +239,172 @@ def fetch_bre_b(user: str, password: str, seen: set, limit: int = 40):
         except Exception:
             pass
     return movs, skipped, pending_more
+
+
+# ---------------------------------------------------------------------------
+# Recibos de suscripciones y compras personales (formato fijo, sin IA).
+# Cada parser devuelve un dict de movimiento o None si el correo no encaja.
+# ---------------------------------------------------------------------------
+_MES_ABBR = {"ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6, "jul": 7, "ago": 8, "sep": 9, "sept": 9, "oct": 10, "nov": 11, "dic": 12}
+
+
+def _money(txt: str) -> float:
+    """'$ 20.700' / '20,700' / '60,200.00' / '3.500,00' -> float. El último separador es decimal salvo que haya 3 dígitos tras él."""
+    t = re.sub(r"[^\d.,]", "", txt).rstrip(".,")
+    if "." in t and "," in t:
+        dec = "." if t.rfind(".") > t.rfind(",") else ","
+        t = t.replace("," if dec == "." else ".", "").replace(dec, ".")
+    elif "." in t or "," in t:
+        sep = "." if "." in t else ","
+        if len(t.split(sep)[-1]) == 3:      # miles
+            t = t.replace(sep, "")
+        else:
+            t = t.replace(sep, ".")
+    return float(t)
+
+
+def _when24(y, mo, d, hh=12, mm=0) -> str:
+    from datetime import datetime
+    return datetime(int(y), int(mo), int(d), int(hh), int(mm)).isoformat()
+
+
+def _mes(nombre: str) -> int:
+    n = nombre.lower().rstrip(".")
+    return _MESES.get(n) or _MES_ABBR[n[:4] if n[:4] == "sept" else n[:3]]
+
+
+def parse_virgin_renovacion(subject: str, text: str):
+    m = re.search(r"Cobramos \$\s*([\d.,]+)\s*COP el (\d{1,2}) de ([a-záéíóú]+) de (\d{4}) a las (\d{1,2}):(\d{2})", text, re.I)
+    if not m:
+        return None
+    monto, d, mes, y, hh, mm = m.groups()
+    prox = re.search(r"Pr[oó]ximo cobro\s+(\d{1,2}) de ([a-záéíóú]+) de (\d{4})", text, re.I)
+    per = re.search(r"Periodicidad cada (mes|a[ñn]o|semana)", text, re.I)
+    plan = re.search(r"Plan \$\s*([\d.,]+)\s*(Mensual|Anual)", text, re.I)
+    orden = re.search(r"No\. de orden\s+([0-9a-f-]{36})", text, re.I)
+    rec = {"mes": "mensual", "semana": "semanal"}.get((per.group(1).lower() if per else "mes"), "anual")
+    nota = "Renovación del plan" + (f" ({plan.group(2).lower()} ${_money(plan.group(1)):,.0f})" if plan else "")
+    return {"tipo": "gasto", "monto": _money(monto), "contraparte": "Virgin Mobile", "categoria": "Suscripciones",
+            "medio": "", "nota": nota, "ocurrido": _when24(y, _mes(mes), d, hh, mm), "recurrencia": rec,
+            "proximo": _when24(prox.group(3), _mes(prox.group(2)), prox.group(1))[:10] if prox else None,
+            "ref": f"virgin:{orden.group(1)}" if orden else None}
+
+
+def parse_wompi_virgin(subject: str, text: str):
+    if "virgin" not in subject.lower():
+        return None
+    m = re.search(r"COP\s*\$\s*([\d.,]+)", text)
+    f = re.search(r"Fecha y Hora\s+(\d{2})/(\d{2})/(\d{4})\s+(\d{2}):(\d{2})", text)
+    ref = re.search(r"Referencia\s+([0-9a-f-]{36})", text, re.I)
+    met = re.search(r"M[eé]todo de pago\s+([A-Za-zÁÉÍÓÚáéíóú]+)", text)
+    if not (m and f):
+        return None
+    d, mo, y, hh, mm = f.groups()
+    return {"tipo": "gasto", "monto": _money(m.group(1)), "contraparte": "Virgin Mobile", "categoria": "Suscripciones",
+            "medio": met.group(1) if met else "", "nota": "Pago de plan (Wompi)", "ocurrido": _when24(y, mo, d, hh, mm),
+            "recurrencia": "mensual", "proximo": None, "ref": f"wompi:{ref.group(1)}" if ref else None}
+
+
+def parse_google_play(subject: str, text: str):
+    ped = re.search(r"N[uú]mero de pedido:\s*(\S+)", text)
+    f = re.search(r"Fecha del pedido:\s*(\d{1,2})\s+([a-záéíóú]{3,4})\.?\s+(\d{4})\s+(\d{1,2}):(\d{2}):\d{2}\s*([ap])\.?\s*m", text, re.I)
+    tot = re.search(r"Total\s*:\s*\$\s*([\d.,]+)", text)
+    if not (ped and f and tot) or re.search(r"\bUSD\b|US\$|\bEUR\b", text):
+        return None
+    d, mes, y, hh, mm, ap = f.groups()
+    h = int(hh) % 12 + (12 if ap.lower() == "p" else 0)
+    art = re.search(r"Art[ií]culo\s+Precio\s+(.+?)\s+\$\s*[\d.,]+", text)
+    suscripcion = bool(re.search(r"renovaci[oó]n autom[aá]tica|se renov[oó] tu suscripci[oó]n", text, re.I))
+    rec = None
+    if suscripcion:
+        rec = "anual" if re.search(r"por a[ñn]o", text, re.I) else "mensual"
+    return {"tipo": "gasto", "monto": _money(tot.group(1)), "contraparte": "Google Play",
+            "categoria": "Suscripciones" if suscripcion else "Ocio y salidas", "medio": "Tarjeta",
+            "nota": (art.group(1).strip() if art else "Compra en Google Play")[:150],
+            "ocurrido": _when24(y, _mes(mes), d, h, mm), "recurrencia": rec, "proximo": None, "ref": f"gplay:{ped.group(1)}"}
+
+
+def parse_factura_documenteme(subject: str, text: str):
+    if "Tipo documento: Factura" not in text:
+        return None
+    val = re.search(r"Valor obligaci[oó]n:\s*([\d.,]+)", text)
+    doc = re.search(r"Documento:\s*(\S+)", text)
+    fec = re.match(r"\s*(\d{2})/(\d{2})/(\d{4})\s+(\d{2}):(\d{2})", text)
+    emisor = re.search(r"Nombre facturador:\s*(.+?)\s+(?:Sucursal:|Un nuevo)", text)
+    if not (val and fec):
+        return None
+    nombre = (emisor.group(1) if emisor else "Comercio").strip()
+    es_cine = "cinemark" in nombre.lower()
+    d, mo, y, hh, mm = fec.groups()
+    return {"tipo": "gasto", "monto": _money(val.group(1)),
+            "contraparte": "Cinemark" if es_cine else re.sub(r"\s+(S\.?A\.?S?\.?|LTDA\.?)$", "", nombre.title(), flags=re.I),
+            "categoria": "Ocio y salidas" if es_cine else None, "medio": "", "nota": "Factura electrónica",
+            "ocurrido": _when24(y, mo, d, hh, mm), "recurrencia": None, "proximo": None,
+            "ref": f"doc:{doc.group(1)}" if doc else None}
+
+
+RECIBO_RULES = [
+    {"folder": "[Gmail]/Todos", "from": "virginmobile", "imap_subject": "Virgin", "subject_has": ["recibo de tu renovaci", "recibo de renovaci"], "parser": parse_virgin_renovacion},
+    {"folder": "Pagos", "from": "wompi", "imap_subject": "Virgin", "subject_has": ["aprobada en virgin"], "parser": parse_wompi_virgin},
+    {"folder": "[Gmail]/Todos", "from": "google", "imap_subject": "Google Play", "subject_has": ["recibo de tu pedido de google play"], "parser": parse_google_play},
+    {"folder": "Facturas", "from": "documenteme", "imap_subject": None, "subject_has": [], "parser": parse_factura_documenteme},
+]
+
+
+def _msg_text(msg) -> str:
+    t = _html_text(msg)
+    if t:
+        return t
+    for part in msg.walk():
+        if part.get_content_type() == "text/plain" and not part.get_filename():
+            return re.sub(r"\s+", " ", part.get_payload(decode=True).decode(part.get_content_charset() or "utf-8", "replace")).strip()
+    return ""
+
+
+def fetch_recibos(user: str, password: str, seen: set, limit: int = 40):
+    """Una sesión IMAP; hasta `limit` correos nuevos. Devuelve (movimientos, claves_omitidas, quedan_mas)."""
+    movs, skipped, more = [], [], False
+    conn = imaplib.IMAP4_SSL(IMAP_HOST, timeout=60)
+    try:
+        conn.login(user, password)
+        for rule in RECIBO_RULES:
+            if conn.select(f'"{rule["folder"]}"', readonly=True)[0] != "OK":
+                continue
+            crit = ["SINCE", "01-Jan-2026", "FROM", rule["from"]] + (["SUBJECT", f'"{rule["imap_subject"]}"'] if rule.get("imap_subject") else [])
+            _, data = conn.uid("search", None, *crit)
+            for uid in sorted((int(u) for u in data[0].split()), reverse=True):
+                key = f'{rule["folder"]}:{uid}'
+                if key in seen:
+                    continue
+                if len(movs) + len(skipped) >= limit:
+                    more = True
+                    break
+                _, full = conn.uid("fetch", str(uid), "(BODY.PEEK[])")
+                msg = email.message_from_bytes(full[0][1])
+                subj = _h(msg["Subject"]).lower()
+                if rule["subject_has"] and not any(w in subj for w in rule["subject_has"]):
+                    skipped.append(key)
+                    continue
+                try:
+                    when = parsedate_to_datetime(msg["Date"])
+                    if (when.year, when.month, when.day) < MIN_DATE:
+                        skipped.append(key)
+                        continue
+                except Exception:
+                    pass
+                mov = rule["parser"](_h(msg["Subject"]), _msg_text(msg))
+                if not mov:
+                    logger.warning(f"Recibo {key}: no se pudo interpretar «{subj[:50]}»")
+                    skipped.append(key)
+                    continue
+                mov.update({"key": key, "origen": "correo"})
+                mov["ref"] = mov.get("ref") or (msg["Message-ID"] or key).strip()
+                movs.append(mov)
+            if more:
+                break
+    finally:
+        try:
+            conn.logout()
+        except Exception:
+            pass
+    return movs, skipped, more
