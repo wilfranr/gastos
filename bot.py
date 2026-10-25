@@ -150,8 +150,9 @@ class TelegramClient:
         payload = {
             "chat_id": chat_id,
             "text": text,
-            "parse_mode": parse_mode
         }
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
         if reply_markup:
             payload["reply_markup"] = reply_markup
         if reply_to_message_id:
@@ -1252,7 +1253,7 @@ GMAIL_BUSY_SECS = 20       # mientras haya backlog, un correo cada ~20 s
 TZ_LOCAL = ZoneInfo("America/Bogota")
 DEFAULT_RECORDATORIOS = {"Luz": 16, "Gas": 5}   # únicos días que aparecían en las notas del histórico
 
-_next_run = {"gmail": 0.0, "reminders": 0.0}
+_next_run = {"gmail": 0.0, "reminders": 0.0, "avisos": 0.0}
 
 
 def md_safe(text: str) -> str:
@@ -1521,8 +1522,27 @@ def reminders_tick():
                          "\n\nCuando pagues, envíame el comprobante o escríbeme el pago. Ajusta días con `/recordar`.")
 
 
+def enviar_avisos():
+    """El bot solo notifica: envía por Telegram los avisos que deja la web (p. ej. «registrado desde la web»)."""
+    if not (GASTOS_API_URL and GASTOS_API_TOKEN):
+        return
+    for a in gastos_api.list_avisos(GASTOS_API_URL, GASTOS_API_TOKEN):
+        res = bot.send_message(ALLOWED_CHAT_ID, a["texto"], parse_mode=None)
+        if res.get("ok"):
+            gastos_api.marcar_aviso(GASTOS_API_URL, GASTOS_API_TOKEN, a["id"])
+        else:
+            logger.error(f"No pude enviar el aviso {a['id']}: {res}")
+            break
+
+
 def run_scheduled_jobs():
     now = time.time()
+    if now >= _next_run["avisos"]:
+        try:
+            enviar_avisos()
+        except Exception as e:
+            logger.error(f"Error enviando avisos: {e}")
+        _next_run["avisos"] = now + 5
     if now >= _next_run["gmail"]:
         try:
             result = gmail_tick()

@@ -64,3 +64,13 @@ def list_compras(base_url: str, token: str) -> list:
     r = requests.get(f"{base_url.rstrip('/')}/api/compras", headers={"Authorization": f"Bearer {token}"}, timeout=10)
     r.raise_for_status()
     return r.json()
+
+
+def list_avisos(base_url: str, token: str) -> list:
+    r = requests.get(f"{base_url.rstrip('/')}/api/avisos/pendientes", headers={"Authorization": f"Bearer {token}"}, timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+
+def marcar_aviso(base_url: str, token: str, aviso_id: int) -> None:
+    requests.post(f"{base_url.rstrip('/')}/api/avisos/{aviso_id}/enviado", headers={"Authorization": f"Bearer {token}"}, timeout=10).raise_for_status()
