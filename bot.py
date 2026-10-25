@@ -52,7 +52,7 @@ CATEGORIAS_ALIMENTACION = [
 ]
 CATEGORIAS_SERVICIOS = [
     "Administración", "Agua", "Claro", "Cuota apto", "DIAN", "Gas",
-    "Impuesto predial", "Libranza", "Luz", "Seguro moto"
+    "Impuesto predial", "Libranza", "Luz", "Seguridad social", "Seguro moto"
 ]
 
 CATEGORIAS_PERSONAL_GASTO = [
@@ -1484,27 +1484,26 @@ def reminders_tick():
     state.data["reminders_last_day"] = now.strftime("%Y-%m-%d")
     state.save()
 
-    records = get_pagos()
-    if not records:
-        return
-    periodo = now.strftime("%Y-%m")
-    last_dom = (datetime(now.year + (now.month == 12), now.month % 12 + 1, 1) - timedelta(days=1)).day
-
+    # Vencimientos: se leen de la base de datos (los mismos que se editan en el dashboard).
     lines = []
-    for cat, day in sorted(reminders_cfg().items()):
-        if not day:
+    try:
+        vencimientos = gastos_api.list_vencimientos(GASTOS_API_URL, GASTOS_API_TOKEN)
+    except Exception as e:
+        logger.warning(f"No pude leer los vencimientos: {e}")
+        vencimientos = []
+    for v in vencimientos:
+        estado, dias = v.get("estado"), v.get("dias")
+        if estado == "pendiente" and dias == 2:
+            cuando = "vence en 2 días"
+        elif estado == "hoy":
+            cuando = "vence hoy"
+        elif estado == "vencido" and dias in (-1, -3, -7):
+            cuando = f"venció hace {-dias} día(s) y aún no aparece el pago"
+        else:
             continue
-        due = min(int(day), last_dom)
-        if now.day not in (max(due - 2, 1), due):
-            continue
-        hist = sorted((r for r in records if r.get("categoria") == cat and r.get("monto")), key=lambda r: r["fecha"])
-        if any(r["fecha"] == periodo for r in hist):
-            continue  # ya está registrado este mes
-        when = "hoy" if now.day == due else f"en {due - now.day} día(s)"
-        txt = f"• *{cat}* suele vencer el día {due} ({when})."
-        if hist:
-            last = hist[-1]
-            txt += f" Último pago: ${float(last['monto']):,.0f} ({last['fecha']})."
+        txt = f"• {v['categoria']} {cuando} (día {v['dia']})."
+        if v.get("ultimo_monto"):
+            txt += f" Último pago: ${float(v['ultimo_monto']):,.0f} ({v['ultimo_periodo']})."
         lines.append(txt)
 
     sin_cat = 0
@@ -1586,17 +1585,21 @@ def run_scheduled_jobs():
 
 
 def handle_recordar(chat_id: int, text: str):
-    """/recordar            -> lista
-       /recordar Luz 16     -> fija día de vencimiento
-       /recordar Luz off    -> desactiva"""
+    """/recordar            -> lista los vencimientos
+       /recordar Luz 15     -> fija el día de vencimiento
+       /recordar Luz off    -> desactiva el recordatorio (también se editan en el dashboard)"""
     args = text.split()[1:]
-    cfg = reminders_cfg()
+    try:
+        actuales = {v["categoria"]: v for v in gastos_api.list_vencimientos(GASTOS_API_URL, GASTOS_API_TOKEN)}
+    except Exception as e:
+        bot.send_message(chat_id, f"❌ No pude consultar los vencimientos: {e}", parse_mode=None)
+        return
     if not args:
-        lines = ["🔔 *Recordatorios de pago* (aviso 2 días antes y el día del vencimiento, si aún no registraste el pago)\n"]
+        lines = ["🔔 *Vencimientos* (aviso 2 días antes, el día y si ya venció sin registrarse)\n"]
         for cat in CATEGORIAS_SERVICIOS:
-            d = cfg.get(cat)
-            lines.append(f"• {cat}: {'día ' + str(d) if d else '—'}")
-        lines.append("\nFija un día: `/recordar Luz 16`\nDesactiva: `/recordar Luz off`")
+            v = actuales.get(cat)
+            lines.append(f"• {cat}: " + (f"día {v['dia']}" + ("" if v["activo"] else " (inactivo)") if v and v.get("dia") else "—"))
+        lines.append("\nFija un día: `/recordar Luz 15`\nDesactiva: `/recordar Luz off`")
         bot.send_message(chat_id, "\n".join(lines))
         return
     if len(args) < 2:
@@ -1607,16 +1610,18 @@ def handle_recordar(chat_id: int, text: str):
     if not cat:
         bot.send_message(chat_id, "❌ Categoría no reconocida. Opciones: " + ", ".join(CATEGORIAS_SERVICIOS))
         return
-    if val == "off":
-        cfg.pop(cat, None)
-        state.save()
-        bot.send_message(chat_id, f"🔕 Recordatorio de *{cat}* desactivado.")
-    elif val.isdigit() and 1 <= int(val) <= 31:
-        cfg[cat] = int(val)
-        state.save()
-        bot.send_message(chat_id, f"🔔 Listo: te aviso por *{cat}* el día {int(val)} de cada mes (y 2 días antes).")
-    else:
-        bot.send_message(chat_id, "❌ El día debe ser un número de 1 a 31, o `off`.")
+    prev = actuales.get(cat) or {}
+    try:
+        if val == "off":
+            gastos_api.guardar_vencimiento(GASTOS_API_URL, GASTOS_API_TOKEN, cat, prev.get("dia"), activo=False)
+            bot.send_message(chat_id, f"🔕 Recordatorio de *{cat}* desactivado.")
+        elif val.isdigit() and 1 <= int(val) <= 31:
+            gastos_api.guardar_vencimiento(GASTOS_API_URL, GASTOS_API_TOKEN, cat, int(val), activo=True)
+            bot.send_message(chat_id, f"🔔 Listo: *{cat}* vence el día {int(val)} de cada mes; te aviso 2 días antes, ese día y si pasa sin registrarse.")
+        else:
+            bot.send_message(chat_id, "❌ El día debe ser un número de 1 a 31, o `off`.")
+    except Exception as e:
+        bot.send_message(chat_id, f"❌ No pude guardarlo: {e}", parse_mode=None)
 
 
 def handle_correo(chat_id: int):

@@ -98,3 +98,14 @@ def capturas_por_confirmar(base_url: str, token: str) -> int:
     r = requests.get(f"{base_url.rstrip('/')}/api/capturas/por-confirmar", headers=_h(token), timeout=10)
     r.raise_for_status()
     return r.json()["n"]
+
+
+def list_vencimientos(base_url: str, token: str) -> list:
+    r = requests.get(f"{base_url.rstrip('/')}/api/vencimientos", headers=_h(token), timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+
+def guardar_vencimiento(base_url: str, token: str, categoria: str, dia: int | None, activo: bool = True) -> None:
+    r = requests.put(f"{base_url.rstrip('/')}/api/vencimientos/{categoria}", json={"dia": dia, "activo": activo}, headers=_h(token), timeout=10)
+    r.raise_for_status()

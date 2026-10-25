@@ -19,7 +19,7 @@ TIMEOUT = 240
 
 CAT_ITEMS = ["Aseo/Hogar", "Bebidas", "Granos", "Lácteos", "Mecato", "Proteínas", "Verduras/Frutas"]
 CAT_SERVICIOS = ["Administración", "Agua", "Claro", "Cuota apto", "DIAN", "Gas",
-                 "Impuesto predial", "Libranza", "Luz", "Seguro moto"]
+                 "Impuesto predial", "Libranza", "Luz", "Seguridad social", "Seguro moto"]
 CAT_GASTO = ["Transporte", "Salud", "Ocio y salidas", "Ropa y cuidado personal", "Educación",
              "Hogar y mantenimiento", "Regalos y familia", "Préstamos y deudas", "Suscripciones", "Comisiones", "Otros gastos"]
 CAT_INGRESO = ["Salario", "Trabajo independiente", "Reembolsos", "Otros ingresos"]
