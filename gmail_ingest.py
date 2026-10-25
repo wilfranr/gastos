@@ -273,7 +273,7 @@ def _mes(nombre: str) -> int:
     return _MESES.get(n) or _MES_ABBR[n[:4] if n[:4] == "sept" else n[:3]]
 
 
-def parse_virgin_renovacion(subject: str, text: str):
+def parse_virgin_renovacion(subject: str, text: str, when=None):
     m = re.search(r"Cobramos \$\s*([\d.,]+)\s*COP el (\d{1,2}) de ([a-záéíóú]+) de (\d{4}) a las (\d{1,2}):(\d{2})", text, re.I)
     if not m:
         return None
@@ -290,7 +290,7 @@ def parse_virgin_renovacion(subject: str, text: str):
             "ref": f"virgin:{orden.group(1)}" if orden else None}
 
 
-def parse_wompi_virgin(subject: str, text: str):
+def parse_wompi_virgin(subject: str, text: str, when=None):
     if "virgin" not in subject.lower():
         return None
     m = re.search(r"COP\s*\$\s*([\d.,]+)", text)
@@ -305,7 +305,7 @@ def parse_wompi_virgin(subject: str, text: str):
             "recurrencia": "mensual", "proximo": None, "ref": f"wompi:{ref.group(1)}" if ref else None}
 
 
-def parse_google_play(subject: str, text: str):
+def parse_google_play(subject: str, text: str, when=None):
     ped = re.search(r"N[uú]mero de pedido:\s*(\S+)", text)
     f = re.search(r"Fecha del pedido:\s*(\d{1,2})\s+([a-záéíóú]{3,4})\.?\s+(\d{4})\s+(\d{1,2}):(\d{2}):\d{2}\s*([ap])\.?\s*m", text, re.I)
     tot = re.search(r"Total\s*:\s*\$\s*([\d.,]+)", text)
@@ -324,7 +324,7 @@ def parse_google_play(subject: str, text: str):
             "ocurrido": _when24(y, _mes(mes), d, h, mm), "recurrencia": rec, "proximo": None, "ref": f"gplay:{ped.group(1)}"}
 
 
-def parse_factura_documenteme(subject: str, text: str):
+def parse_factura_documenteme(subject: str, text: str, when=None):
     if "Tipo documento: Factura" not in text:
         return None
     val = re.search(r"Valor obligaci[oó]n:\s*([\d.,]+)", text)
@@ -351,6 +351,47 @@ RECIBO_RULES = [
 ]
 
 
+USD_COP = 4000.0   # ESTIMACIÓN para cobros en dólares (no es la TRM del día); se aclara en la nota del movimiento
+_NEQUI_OMITIR = ("tpaga", "compensar", "bancolombia", "gou payments", "tecnipagos", "enel", "vanti", "claro", "dian", "acueducto")
+_NEQUI_CATEGORIA: dict = {}   # las categorías por comercio se aprenden con reglas en la base privada, no aquí
+
+
+def parse_arq_renovacion(subject: str, text: str, when=None):
+    """ARQ Premium: 'Tu plan Mensual ha sido renovado' (cobra en USDc)."""
+    from datetime import timedelta, timezone
+    m = re.search(r"([\d.,]+)\s*USDc", text)
+    if not (m and when):
+        return None
+    usd = _money(m.group(1))
+    local = when.astimezone(timezone(timedelta(hours=-5)))
+    return {"tipo": "gasto", "monto": round(usd * USD_COP), "contraparte": "ARQ Premium", "categoria": "Suscripciones",
+            "medio": "ARQ", "nota": f"Plan mensual: {usd:.2f} USDc (convertido a ${USD_COP:,.0f} por dólar, estimado)",
+            "ocurrido": local.replace(tzinfo=None, microsecond=0).isoformat(), "recurrencia": "mensual", "proximo": None,
+            "ref": f"arq:{local.strftime('%Y%m%d%H%M')}"}
+
+
+def parse_nequi_pago(subject: str, text: str, when=None):
+    """Nequi '¡Pago exitoso!': pago a un comercio. Se omiten los recibos del hogar, que ya tienen su propio flujo."""
+    m = re.search(r"Hiciste un pago en\s+(.+?)\s+por\s+\$\s*([\d.,]+)\s+Fecha:\s*El\s+(\d{1,2}) de ([a-záéíóú]+) de (\d{4})\s+Hora:\s*(\d{1,2}):(\d{2})\s*([ap])\.?\s*m", text, re.I)
+    if not m:
+        return None
+    nombre, monto, d, mes, y, hh, mm, ap = m.groups()
+    bajo = nombre.lower()
+    if any(k in bajo for k in _NEQUI_OMITIR):
+        return {}   # omitido a propósito (recibo del hogar)
+    cus = re.search(r"CUS:\s*(\d+)", text)
+    return {"tipo": "gasto", "monto": _money(monto), "contraparte": nombre.strip().title()[:120],
+            "categoria": next((v for k, v in _NEQUI_CATEGORIA.items() if k in bajo), None), "medio": "Nequi",
+            "nota": "Pago desde Nequi", "ocurrido": _when(d, mes, y, hh, mm, ap), "recurrencia": None, "proximo": None,
+            "ref": f"nequi-pago:{cus.group(1)}" if cus else None}
+
+
+RECIBO_RULES += [
+    {"folder": "[Gmail]/Todos", "from": "arqfinance", "imap_subject": "plan", "subject_has": ["ha sido renovado"], "parser": parse_arq_renovacion},
+    {"folder": "Pagos", "from": "somos@nequi.com.co", "imap_subject": None, "subject_has": ["pago exitoso"], "parser": parse_nequi_pago, "key_prefix": "pago:"},
+]
+
+
 def _msg_text(msg) -> str:
     t = _html_text(msg)
     if t:
@@ -373,7 +414,7 @@ def fetch_recibos(user: str, password: str, seen: set, limit: int = 40):
             crit = ["SINCE", "01-Jan-2026", "FROM", rule["from"]] + (["SUBJECT", f'"{rule["imap_subject"]}"'] if rule.get("imap_subject") else [])
             _, data = conn.uid("search", None, *crit)
             for uid in sorted((int(u) for u in data[0].split()), reverse=True):
-                key = f'{rule["folder"]}:{uid}'
+                key = f'{rule.get("key_prefix", "")}{rule["folder"]}:{uid}'
                 if key in seen:
                     continue
                 if len(movs) + len(skipped) >= limit:
@@ -392,7 +433,14 @@ def fetch_recibos(user: str, password: str, seen: set, limit: int = 40):
                         continue
                 except Exception:
                     pass
-                mov = rule["parser"](_h(msg["Subject"]), _msg_text(msg))
+                try:
+                    when_dt = parsedate_to_datetime(msg["Date"])
+                except Exception:
+                    when_dt = None
+                mov = rule["parser"](_h(msg["Subject"]), _msg_text(msg), when_dt)
+                if mov == {}:
+                    skipped.append(key)
+                    continue
                 if not mov:
                     logger.warning(f"Recibo {key}: no se pudo interpretar «{subj[:50]}»")
                     skipped.append(key)
