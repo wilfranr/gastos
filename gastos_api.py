@@ -66,11 +66,35 @@ def list_compras(base_url: str, token: str) -> list:
     return r.json()
 
 
-def list_avisos(base_url: str, token: str) -> list:
-    r = requests.get(f"{base_url.rstrip('/')}/api/avisos/pendientes", headers={"Authorization": f"Bearer {token}"}, timeout=10)
+def _h(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def crear_notificacion(base_url: str, token: str, tipo: str, titulo: str, texto: str = "") -> int:
+    r = requests.post(f"{base_url.rstrip('/')}/api/notificaciones", json={"tipo": tipo, "titulo": titulo[:160], "texto": texto[:2000]},
+                      headers=_h(token), timeout=10)
+    r.raise_for_status()
+    return r.json()["id"]
+
+
+def notificaciones_telegram_pendientes(base_url: str, token: str) -> list:
+    r = requests.get(f"{base_url.rstrip('/')}/api/notificaciones/telegram-pendientes", headers=_h(token), timeout=10)
     r.raise_for_status()
     return r.json()
 
 
-def marcar_aviso(base_url: str, token: str, aviso_id: int) -> None:
-    requests.post(f"{base_url.rstrip('/')}/api/avisos/{aviso_id}/enviado", headers={"Authorization": f"Bearer {token}"}, timeout=10).raise_for_status()
+def marcar_telegram(base_url: str, token: str, nid: int, ok: bool) -> None:
+    requests.post(f"{base_url.rstrip('/')}/api/notificaciones/{nid}/telegram", json={"ok": ok}, headers=_h(token), timeout=10).raise_for_status()
+
+
+def crear_captura_externa(base_url: str, token: str, titulo: str, texto: str, resultado: dict, archivo: str | None, archivo_nombre: str) -> dict:
+    r = requests.post(f"{base_url.rstrip('/')}/api/capturas/externa", headers=_h(token), timeout=15,
+                      json={"titulo": titulo[:160], "texto": texto[:2000], "archivo": archivo, "archivo_nombre": archivo_nombre[:200], "resultado": resultado})
+    r.raise_for_status()
+    return r.json()
+
+
+def capturas_por_confirmar(base_url: str, token: str) -> int:
+    r = requests.get(f"{base_url.rstrip('/')}/api/capturas/por-confirmar", headers=_h(token), timeout=10)
+    r.raise_for_status()
+    return r.json()["n"]

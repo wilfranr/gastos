@@ -14,6 +14,7 @@ import re
 import shutil
 import logging
 import subprocess
+import uuid
 from pathlib import Path
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -21,6 +22,7 @@ from collections import defaultdict
 import requests
 
 import gmail_ingest
+import extraccion
 import gastos_api
 
 # Configuración de Logging
@@ -82,6 +84,7 @@ BOT_TOKEN = ENV_VARS.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = ENV_VARS.get("TELEGRAM_CHAT_ID")
 GASTOS_API_URL = ENV_VARS.get("GASTOS_API_URL")
 GASTOS_API_TOKEN = ENV_VARS.get("GASTOS_API_TOKEN")
+DASHBOARD_URL = ENV_VARS.get("DASHBOARD_URL", "https://facunbot.duckdns.org")
 # Fuente de verdad: MySQL (gastos-app). LEGACY_PAGES_SYNC=true vuelve al modo anterior (archivos + git push a Pages).
 LEGACY_PAGES_SYNC = ENV_VARS.get("LEGACY_PAGES_SYNC", "false").lower() == "true"
 USE_DB = bool(GASTOS_API_URL and GASTOS_API_TOKEN) and not LEGACY_PAGES_SYNC
@@ -1247,7 +1250,7 @@ def normalize_personal(data: dict):
 GMAIL_USER = ENV_VARS.get("GMAIL_USER")
 GMAIL_PASS = ENV_VARS.get("GMAIL_APP_PASSWORD")
 GMAIL_DIR = FACTURAS_DIR / "gmail"
-GMAIL_MAX_PENDING = 5      # máximo de correos esperando tu confirmación; evita avalanchas
+GMAIL_MAX_PENDING = 10     # facturas del correo esperando tu confirmación en la bandeja; evita avalanchas
 GMAIL_IDLE_SECS = 300
 GMAIL_BUSY_SECS = 20       # mientras haya backlog, un correo cada ~20 s
 TZ_LOCAL = ZoneInfo("America/Bogota")
@@ -1262,7 +1265,34 @@ def md_safe(text: str) -> str:
 
 
 def gmail_pending_count() -> int:
-    return sum(1 for p in state.data["pending"].values() if p.get("origen") == "gmail")
+    """Facturas del correo esperando tu confirmación en la bandeja del dashboard (más las que aún queden en Telegram)."""
+    viejas = sum(1 for p in state.data["pending"].values() if p.get("origen") == "gmail")
+    try:
+        return viejas + gastos_api.capturas_por_confirmar(GASTOS_API_URL, GASTOS_API_TOKEN)
+    except Exception as e:
+        logger.warning(f"No pude consultar las capturas por confirmar: {e}")
+        return GMAIL_MAX_PENDING          # ante la duda, no inundar la bandeja
+
+
+def notificar(tipo: str, titulo: str, texto: str = "") -> None:
+    """Crea una notificación en la bandeja del dashboard; ella se encarga de Telegram y del push al teléfono."""
+    try:
+        gastos_api.crear_notificacion(GASTOS_API_URL, GASTOS_API_TOKEN, tipo, titulo, texto)
+    except Exception as e:
+        logger.error(f"No pude crear la notificación en la bandeja ({e}); la envío directo por Telegram")
+        bot.send_message(ALLOWED_CHAT_ID, f"{titulo}\n{texto}".strip(), parse_mode=None)
+
+
+def copiar_a_cargas(path: Path):
+    """Copia un adjunto (foto/PDF) a la carpeta de cargas de la web para verlo desde el dashboard. None si no es foto/PDF."""
+    if path.suffix.lower() not in (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        return None
+    sub = datetime.now().strftime("%Y-%m")
+    carpeta = FACTURAS_DIR / "web" / sub
+    carpeta.mkdir(parents=True, exist_ok=True)
+    nombre = f"{uuid.uuid4().hex}{path.suffix.lower().replace('.jpeg', '.jpg')}"
+    shutil.copy2(path, carpeta / nombre)
+    return f"{sub}/{nombre}"
 
 
 def import_nequi() -> str:
@@ -1288,8 +1318,8 @@ def import_nequi() -> str:
     acum["backlog"] = acum["backlog"] or more
     state.data["gmail_seen"] = sorted(seen)
     if not more and not failed and acum["backlog"] and acum["nuevos"]:
-        bot.send_message(ALLOWED_CHAT_ID, f"💸 Importé *{acum['nuevos']}* movimientos de Nequi (Bre-B) a tu base privada. "
-                                           "Clasifícalos en el dashboard → *Personal*; la categoría se recuerda por persona.")
+        notificar("aviso", f"Importé {acum['nuevos']} movimientos de Nequi (Bre-B)",
+                  "Clasifícalos en el dashboard → Personal; la categoría se recuerda por persona.")
         state.data["nequi_acum"] = {"nuevos": 0, "backlog": False}
     state.save()
     return "processed" if (more and not failed) else "idle"
@@ -1328,18 +1358,16 @@ def import_recibos() -> str:
     if not more and not failed:
         if primera_vez:
             if state.data["recibos_acum"]:
-                bot.send_message(ALLOWED_CHAT_ID, f"🔁 Importé *{state.data['recibos_acum']}* cobros de suscripciones y compras personales desde tu correo "
-                                                   "(Virgin, Google Play, Cinemark). Revísalos en el dashboard → *Personal*.")
+                notificar("aviso", f"Importé {state.data['recibos_acum']} cobros de suscripciones y compras personales",
+                          "Desde tu correo (Virgin, Google Play, Cinemark, ARQ, Nequi). Revísalos en el dashboard → Personal.")
             state.data["recibos_init"] = True
             state.data["recibos_acum"] = 0
         else:
             for mov in nuevos:
-                txt = f"🔁 *Cobro detectado:* {md_safe(mov['contraparte'])} ${mov['monto']:,.0f}"
-                if mov.get("categoria"):
-                    txt += f" ({mov['categoria']})"
+                txt = mov.get("categoria") or "Sin categoría"
                 if mov.get("proximo"):
-                    txt += f"\nPróximo cobro: {_fmt_prox(mov['proximo'])}"
-                bot.send_message(ALLOWED_CHAT_ID, txt)
+                    txt += f" · próximo cobro: {_fmt_prox(mov['proximo'])}"
+                notificar("aviso", f"Cobro detectado: {mov['contraparte']} ${mov['monto']:,.0f}", txt)
             state.data["recibos_acum"] = 0
     state.save()
     return "processed" if (more and not failed) else "idle"
@@ -1366,77 +1394,65 @@ def gmail_tick() -> str:
         return "idle"
 
     key = cand["key"]
-    extra = (
-        "CONTEXTO: este archivo viene de un correo electrónico.\n"
-        f"Remitente: {cand['sender']}. Asunto: {cand['subject']}. Recibido: {cand['date']}.\n"
-        "Usa la fecha y el periodo reales del documento, no la fecha de recepción. "
-        "Si es un pago rechazado, publicidad, o no es un servicio/impuesto de la lista ni una compra de comida, "
-        'responde exactamente {"tipo": "desconocido"}.\n'
-    )
-    extracted = extract_with_agy(Path(cand["path"]), extra)
+    contexto = (f"Esto viene de un correo electrónico. Remitente: {cand['sender']}. Asunto: {cand['subject']}. Recibido: {cand['date']}. "
+                "Usa la fecha y el periodo reales del documento, no la fecha de recepción. "
+                "Si es publicidad, un pago rechazado o no describe un gasto, ingreso o recibo, responde desconocido.")
+    res = extraccion.extraer(contexto, Path(cand["path"]))
 
-    if not extracted.get("ok"):
-        fails = state.data.setdefault("gmail_fail", {})
-        fails[key] = fails.get(key, 0) + 1
-        logger.warning(f"Gmail {key}: extracción falló ({fails[key]}): {extracted.get('error')}")
-        if fails[key] >= 2:
+    if not res.get("ok"):
+        if res.get("desconocido"):                     # publicidad, rechazos, etc.: se omite sin molestar
+            logger.info(f"Gmail {key}: omitido (no es un gasto)")
             seen.add(key)
-            bot.send_message(ALLOWED_CHAT_ID, f"⚠️ No pude leer el correo «{md_safe(cand['subject'])[:60]}» tras 2 intentos; lo omito.")
+        else:
+            fails = state.data.setdefault("gmail_fail", {})
+            fails[key] = fails.get(key, 0) + 1
+            logger.warning(f"Gmail {key}: extracción falló ({fails[key]}): {res.get('mensaje')}")
+            if fails[key] >= 2:
+                seen.add(key)
+                notificar("alerta", "No pude leer un correo", f"«{cand['subject'][:80]}» falló tras 2 intentos; lo omití.")
         state.data["gmail_seen"] = sorted(seen)
         state.save()
         return "processed"
 
     seen.add(key)
-    payload = extracted["result"]
-    extracted_type = payload.get("tipo")
-    data = payload.get("data", {}) or {}
-
-    valid = False
-    try:
-        if extracted_type == "servicio":
-            valid = float(data.get("monto", 0)) > 0 and data.get("categoria") in CATEGORIAS_SERVICIOS
-        elif extracted_type == "alimentacion":
-            valid = float(data.get("total", 0)) > 0
-    except (TypeError, ValueError):
-        valid = False
-
-    if not valid:
-        logger.info(f"Gmail {key}: omitido (tipo={extracted_type})")
-        state.data["gmail_seen"] = sorted(seen)
-        state.save()
-        return "processed"
-
-    if "nota" in data:
-        data["nota"] = sanitize_text(data["nota"])
+    tipo, data = res["resultado"]["tipo"], res["resultado"]["data"]
 
     # Mismo mes y mismo monto: ya está registrado (p. ej. con el método anterior); no molestar.
-    if check_duplicates(extracted_type, data, tolerance=0)[0]:
-        logger.info(f"Gmail {key}: duplicado exacto de {data.get('categoria') or data.get('comercio')}, omitido")
+    try:
+        if tipo == "servicio" and data.get("categoria"):
+            ya = check_duplicates("servicio", {"fecha": data["periodo"], "categoria": data["categoria"], "monto": data["monto"]}, tolerance=0)[0]
+        else:
+            ya = check_duplicates(tipo, data, tolerance=0)[0]
+    except Exception as e:
+        logger.warning(f"Gmail {key}: no pude revisar duplicados: {e}")
+        ya = False
+    if ya:
+        logger.info(f"Gmail {key}: duplicado exacto, omitido")
         state.data["gmail_auto_skipped"] = state.data.get("gmail_auto_skipped", 0) + 1
         state.data["gmail_seen"] = sorted(seen)
         state.save()
         return "processed"
 
-    math_ok, math_msg = check_math(extracted_type, data)
-    dup_found, dup_msg = check_duplicates(extracted_type, data)
-
-    item_id = f"g{int(time.time() * 1000)}"
-    state.data["pending"][item_id] = {
-        "tipo": extracted_type,
-        "data": data,
-        "filepath": cand["path"],
-        "math_msg": math_msg,
-        "dup_msg": dup_msg,
-        "created_at": time.time(),
-        "origen": "gmail",
-        "gmail_key": key,
-    }
+    # Va a la bandeja del dashboard: ahí se revisa (con la miniatura de la factura) y se confirma.
+    if tipo == "alimentacion":
+        titulo = f"Confirma compra: {data['comercio']} ${data['total']:,.0f}"
+    elif tipo == "servicio":
+        titulo = f"Confirma recibo: {data.get('categoria') or 'servicio'} {data['periodo']} ${data['monto']:,.0f}"
+    else:
+        titulo = f"Confirma {'ingreso' if data['tipo'] == 'ingreso' else 'gasto'}: {data.get('contraparte') or data.get('categoria') or ''} ${data['monto']:,.0f}".replace(":  $", ": $")
+    try:
+        rel = copiar_a_cargas(Path(cand["path"]))
+        gastos_api.crear_captura_externa(GASTOS_API_URL, GASTOS_API_TOKEN, titulo,
+                                         f"Detectado en tu correo ({cand['sender'][:40]}: {cand['subject'][:60]})",
+                                         {"tipo": tipo, "data": data}, rel, Path(cand["path"]).name)
+    except Exception as e:
+        logger.error(f"Gmail {key}: no pude enviarlo a la bandeja: {e}")
+        seen.discard(key)                              # se reintenta en el próximo ciclo
+        state.data["gmail_seen"] = sorted(seen)
+        state.save()
+        return "idle"
     state.data["gmail_seen"] = sorted(seen)
     state.save()
-
-    preview_text, reply_markup = format_preview(item_id, extracted_type, data, math_msg, dup_msg)
-    header = f"📧 *Desde tu correo:* {md_safe(cand['sender'])[:40]} — {md_safe(cand['subject'])[:60]}\n\n"
-    bot.send_message(ALLOWED_CHAT_ID, header + preview_text, reply_markup=reply_markup)
     return "processed"
 
 
@@ -1518,31 +1534,39 @@ def reminders_tick():
         lines.append(f"• Tienes *{sin_cat}* movimientos personales sin categoría (dashboard → Personal).")
 
     if lines:
-        bot.send_message(ALLOWED_CHAT_ID, "🔔 *Recordatorio de pagos*\n\n" + "\n".join(lines) +
-                         "\n\nCuando pagues, envíame el comprobante o escríbeme el pago. Ajusta días con `/recordar`.")
+        notificar("recordatorio", "Recordatorio de pagos", "\n".join(l.replace("*", "") for l in lines) +
+                         "\n\nCuando pagues, regístralo con el botón + del dashboard. Ajusta días con /recordar en Telegram.")
 
 
-def enviar_avisos():
-    """El bot solo notifica: envía por Telegram los avisos que deja la web (p. ej. «registrado desde la web»)."""
+_ultimo_intento_tg: dict = {}
+_ICONOS = {"aviso": "🔔", "confirmar": "📥", "recordatorio": "⏰", "alerta": "⚠️"}
+
+
+def enviar_avisos(cliente=None):
+    """Canal Telegram de la bandeja: envía las notificaciones pendientes y deja registrado si salió o no (se reintenta)."""
+    cliente = cliente or bot
     if not (GASTOS_API_URL and GASTOS_API_TOKEN):
         return
-    for a in gastos_api.list_avisos(GASTOS_API_URL, GASTOS_API_TOKEN):
-        res = bot.send_message(ALLOWED_CHAT_ID, a["texto"], parse_mode=None)
+    for n in gastos_api.notificaciones_telegram_pendientes(GASTOS_API_URL, GASTOS_API_TOKEN):
+        if time.time() - _ultimo_intento_tg.get(n["id"], 0) < 30:
+            continue                                   # tras un fallo espera 30 s antes de reintentar
+        _ultimo_intento_tg[n["id"]] = time.time()
+        texto = f"{_ICONOS.get(n['tipo'], '🔔')} {n['titulo']}"
+        if n["texto"]:
+            texto += f"\n{n['texto']}"
+        if n["tipo"] != "aviso":
+            texto += f"\n\nAbrir la bandeja: {DASHBOARD_URL}/#bandeja"
+        res = cliente.send_message(ALLOWED_CHAT_ID, texto[:4000], parse_mode=None)
+        gastos_api.marcar_telegram(GASTOS_API_URL, GASTOS_API_TOKEN, n["id"], bool(res.get("ok")))
         if res.get("ok"):
-            gastos_api.marcar_aviso(GASTOS_API_URL, GASTOS_API_TOKEN, a["id"])
+            _ultimo_intento_tg.pop(n["id"], None)
         else:
-            logger.error(f"No pude enviar el aviso {a['id']}: {res}")
-            break
+            logger.error(f"Telegram no entregó la notificación {n['id']}: {res.get('description') or res}")
 
 
 def run_scheduled_jobs():
     now = time.time()
-    if now >= _next_run["avisos"]:
-        try:
-            enviar_avisos()
-        except Exception as e:
-            logger.error(f"Error enviando avisos: {e}")
-        _next_run["avisos"] = now + 5
+    # (los avisos de la bandeja salen por su propio hilo: ver _hilo_avisos)
     if now >= _next_run["gmail"]:
         try:
             result = gmail_tick()
@@ -1607,7 +1631,20 @@ def handle_correo(chat_id: int):
     )
 
 
+def _hilo_avisos():
+    """Entrega de la bandeja por Telegram en un hilo propio: no depende del sondeo de mensajes ni de la lectura del correo."""
+    cliente = TelegramClient(BOT_TOKEN)
+    while True:
+        try:
+            enviar_avisos(cliente)
+        except Exception as e:
+            logger.error(f"Error enviando avisos: {e}")
+        time.sleep(3)
+
+
 def main():
+    import threading
+    threading.Thread(target=_hilo_avisos, name="avisos", daemon=True).start()
     logger.info("Iniciando @Facundo1bot daemon...")
     logger.info(f"Escuchando únicamente mensajes de chat_id={ALLOWED_CHAT_ID}")
 

@@ -143,7 +143,7 @@ def extraer(texto: str = "", archivo: Path | None = None) -> dict:
         crudo = (r.stdout or r.stderr).strip()
         norm = normalizar(_json_de(crudo))
         if not norm:
-            return {"ok": False, "mensaje": "No pude identificar un monto o el tipo de movimiento. Puedes llenarlo a mano."}
+            return {"ok": False, "desconocido": True, "mensaje": "No pude identificar un monto o el tipo de movimiento. Puedes llenarlo a mano."}
         return {"ok": True, "resultado": norm}
     except subprocess.TimeoutExpired:
         return {"ok": False, "mensaje": "El análisis tardó demasiado. Intenta de nuevo o llénalo a mano."}
