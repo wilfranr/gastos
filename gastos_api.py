@@ -109,3 +109,10 @@ def list_vencimientos(base_url: str, token: str) -> list:
 def guardar_vencimiento(base_url: str, token: str, categoria: str, dia: int | None, activo: bool = True) -> None:
     r = requests.put(f"{base_url.rstrip('/')}/api/vencimientos/{categoria}", json={"dia": dia, "activo": activo}, headers=_h(token), timeout=10)
     r.raise_for_status()
+
+
+def texto_analisis_compra(base_url: str, token: str, compra_id: int) -> str:
+    """Resumen en texto del análisis de precios de una compra guardada (vacío si no hay con qué comparar)."""
+    r = requests.get(f"{base_url.rstrip('/')}/api/compras/{compra_id}/analisis", headers=_h(token), timeout=15)
+    r.raise_for_status()
+    return r.json().get("texto", "")

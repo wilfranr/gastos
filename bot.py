@@ -958,6 +958,13 @@ def handle_callback_query(cq: dict):
 
         # Generar análisis
         analysis = generate_analysis(extracted_type, data)
+        if extracted_type == "alimentacion" and success and USE_DB and rec_num:
+            try:       # comparación de precios producto por producto frente a compras anteriores
+                extra = gastos_api.texto_analisis_compra(GASTOS_API_URL, GASTOS_API_TOKEN, rec_num)
+                if extra:
+                    analysis = (analysis + "\n\n" if analysis else "") + md_safe(extra)
+            except Exception as e:
+                logger.warning(f"No pude calcular el análisis de precios: {e}")
 
         if file_path:
             final_msg = f"{msg_result}\n\n📌 Guardado como registro *#{history_id}*. Puedes consultar la imagen original con `/ver {history_id}`."
