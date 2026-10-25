@@ -50,7 +50,7 @@ Clasifícalo en UNA de estas opciones y responde con el JSON indicado:
      "items":[{{"categoria":"una de {CAT_ITEMS}","producto":"DESCRIPCIÓN EN MAYÚSCULAS","cantidad":1,"unidad":"Kg|Und|PAQ","precio_unit":1000,"subtotal":1000}}]}}}}
    Si hay una factura legible, lista los ítems; si es solo un mensaje, "items" va vacío.
 
-2. "servicio": recibo del hogar: luz, agua, gas, Claro (internet/teléfono fijo), administración, cuota del apartamento, impuesto predial, DIAN, libranza, seguro de la moto.
+2. "servicio": recibo del hogar: luz, agua, gas, Claro (internet/teléfono fijo), administración, cuota del apartamento, impuesto predial, DIAN, libranza, seguro de la moto, y seguridad social (aportes a salud/pensión/ARL pagados por transferencia a una comercializadora o agencia, p. ej. una transferencia Nequi/Bre-B a «COMERCIALIZADORA …»).
    {{"tipo":"servicio","data":{{"periodo":"YYYY-MM (mes del pago)","categoria":"una de {CAT_SERVICIOS}","monto":150000,"nota":"breve, sin datos sensibles"}}}}
 
 3. "personal": cualquier otro gasto o ingreso personal que NO sea comida ni un recibo del hogar (taxi, médico, farmacia, cine, ropa, peluquería, regalo, préstamo, curso, suscripciones como Netflix/Spotify/plan de celular) o plata recibida (me pagaron, consignaron, reembolso).
