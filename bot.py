@@ -1351,6 +1351,10 @@ def import_recibos() -> str:
     nuevos, failed = [], False
     for mov in movs:
         try:
+            if mov.get("pendiente_monto"):      # el correo no trae el valor: se le pide a la persona en la bandeja
+                gastos_api.pedido_pendiente(GASTOS_API_URL, GASTOS_API_TOKEN, mov)
+                seen.add(mov["key"])
+                continue
             res = gastos_api.push_movimiento(GASTOS_API_URL, GASTOS_API_TOKEN, mov)
         except Exception as e:
             logger.error(f"Recibos: no pude guardar {mov['key']}: {e}")

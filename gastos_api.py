@@ -48,6 +48,16 @@ def push_movimiento(base_url: str, token: str, mov: dict) -> dict:
     return r.json()
 
 
+def pedido_pendiente(base_url: str, token: str, mov: dict) -> dict:
+    """Pide en la bandeja el valor de un pedido en línea cuyo correo no lo trae."""
+    payload = {"ref": mov["ref"], "comercio": mov["contraparte"], "ocurrido": mov["ocurrido"],
+               "descripcion": mov.get("nota") or "", "categoria": mov.get("categoria") or "Compras en línea"}
+    r = requests.post(f"{base_url.rstrip('/')}/api/pedidos-pendientes", json=payload,
+                      headers={"Authorization": f"Bearer {token}"}, timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+
 def list_movimientos(base_url: str, token: str) -> list:
     r = requests.get(f"{base_url.rstrip('/')}/api/movimientos", headers={"Authorization": f"Bearer {token}"}, timeout=10)
     r.raise_for_status()

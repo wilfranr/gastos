@@ -519,6 +519,21 @@ RECIBO_RULES += [
 ]
 
 
+def parse_temu_pedido(subject: str, text: str, when=None):
+    """Confirmación de pedido de Temu: el correo no trae el valor pagado, así que solo se pide en la bandeja."""
+    n = re.search(r"(PO-\d{3}-\d{10,})", subject + " " + text)
+    if not (n and when):
+        return None
+    local = _amz_local(when)
+    return {"pendiente_monto": True, "contraparte": "Temu", "categoria": "Compras en línea", "ocurrido": local.isoformat(),
+            "nota": "", "ref": f"temu:{n.group(1)}", "monto": 0, "tipo": "gasto"}
+
+
+RECIBO_RULES += [
+    {"folder": "[Gmail]/Todos", "from": "orders@order.temu.com", "imap_subject": None, "subject_has": ["confirmación de tu pedido", "confirmacion de tu pedido"], "parser": parse_temu_pedido, "key_prefix": "temu:"},
+]
+
+
 def _msg_text(msg) -> str:
     t = _html_text(msg)
     if t:
