@@ -8,12 +8,14 @@ Lectura de facturas desde Gmail (IMAP, solo lectura) para @Facundo1bot.
 
 import html as _html
 import imaplib
+from datetime import datetime
 import email
 import logging
 import re
 from email.header import decode_header, make_header
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+
 
 logger = logging.getLogger("facundobot.gmail")
 
@@ -351,7 +353,40 @@ RECIBO_RULES = [
 ]
 
 
-USD_COP = 4000.0   # ESTIMACIÓN para cobros en dólares (no es la TRM del día); se aclara en la nota del movimiento
+USD_COP_RESPALDO = 3200.0   # solo si fallan las dos fuentes de la TRM
+_TRM_CACHE: dict = {}
+
+
+def trm(fecha=None):
+    """(valor, fuente) de la TRM oficial vigente en `fecha` (datos.gov.co); respaldo: tasa de mercado de hoy."""
+    import json
+    import urllib.parse
+    import urllib.request
+    dia = (fecha or datetime.now()).strftime("%Y-%m-%d")
+    if dia in _TRM_CACHE:
+        return _TRM_CACHE[dia]
+    res = None
+    try:
+        q = urllib.parse.urlencode({"$where": f"vigenciadesde <= '{dia}T00:00:00'", "$order": "vigenciadesde DESC", "$limit": "1"})
+        with urllib.request.urlopen(f"https://www.datos.gov.co/resource/32sa-8pi3.json?{q}", timeout=15) as r:
+            res = (float(json.load(r)[0]["valor"]), "TRM")
+    except Exception:
+        try:
+            with urllib.request.urlopen("https://open.er-api.com/v6/latest/USD", timeout=15) as r:
+                res = (float(json.load(r)["rates"]["COP"]), "tasa de mercado")
+        except Exception:
+            logger.warning("sin tasa USD→COP; uso la de respaldo")
+            return (USD_COP_RESPALDO, "tasa de respaldo")   # no se guarda en caché
+    _TRM_CACHE[dia] = res
+    return res
+
+
+def usd_a_cop(usd: float, fecha=None):
+    """(pesos, nota) para un cobro en dólares; es un estimado: el medio de pago suma su margen."""
+    tasa, fuente = trm(fecha)
+    return round(usd * tasa), f"USD {usd:.2f} × {fuente} {tasa:,.2f} (estimado)"
+
+
 _NEQUI_OMITIR = ("tpaga", "compensar", "bancolombia", "gou payments", "tecnipagos", "enel", "vanti", "claro", "dian", "acueducto")
 _NEQUI_CATEGORIA: dict = {}   # las categorías por comercio se aprenden con reglas en la base privada, no aquí
 
@@ -364,8 +399,9 @@ def parse_arq_renovacion(subject: str, text: str, when=None):
         return None
     usd = _money(m.group(1))
     local = when.astimezone(timezone(timedelta(hours=-5)))
-    return {"tipo": "gasto", "monto": round(usd * USD_COP), "contraparte": "ARQ Premium", "categoria": "Suscripciones",
-            "medio": "ARQ", "nota": f"Plan mensual: {usd:.2f} USDc (convertido a ${USD_COP:,.0f} por dólar, estimado)",
+    monto, conv = usd_a_cop(usd, local)
+    return {"tipo": "gasto", "monto": monto, "contraparte": "ARQ Premium", "categoria": "Suscripciones",
+            "medio": "ARQ", "nota": f"Plan mensual: {conv}",
             "ocurrido": local.replace(tzinfo=None, microsecond=0).isoformat(), "recurrencia": "mensual", "proximo": None,
             "ref": f"arq:{local.strftime('%Y%m%d%H%M')}"}
 
