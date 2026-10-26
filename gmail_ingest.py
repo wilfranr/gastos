@@ -366,11 +366,16 @@ def trm(fecha=None):
     if dia in _TRM_CACHE:
         return _TRM_CACHE[dia]
     res = None
-    try:
-        q = urllib.parse.urlencode({"$where": f"vigenciadesde <= '{dia}T00:00:00'", "$order": "vigenciadesde DESC", "$limit": "1"})
-        with urllib.request.urlopen(f"https://www.datos.gov.co/resource/32sa-8pi3.json?{q}", timeout=15) as r:
-            res = (float(json.load(r)[0]["valor"]), "TRM")
-    except Exception:
+    q = urllib.parse.urlencode({"$where": f"vigenciadesde <= '{dia}T00:00:00'", "$order": "vigenciadesde DESC", "$limit": "1"})
+    for _ in range(3):
+        try:
+            with urllib.request.urlopen(f"https://www.datos.gov.co/resource/32sa-8pi3.json?{q}", timeout=15) as r:
+                res = (float(json.load(r)[0]["valor"]), "TRM")
+            break
+        except Exception:
+            import time
+            time.sleep(2)
+    if res is None:
         try:
             with urllib.request.urlopen("https://open.er-api.com/v6/latest/USD", timeout=15) as r:
                 res = (float(json.load(r)["rates"]["COP"]), "tasa de mercado")
@@ -441,6 +446,79 @@ RECIBO_RULES += [
 ]
 
 
+_AMZ = {"cargado": 0.0, "cancelados": set()}
+
+
+def _amazon_cancelados(conn):
+    """Pedidos de Amazon cancelados (no se cobran); se consulta a lo sumo cada 6 horas."""
+    import time
+    if time.time() - _AMZ["cargado"] < 6 * 3600:
+        return
+    cancelados = set()
+    if conn.select('"[Gmail]/Todos"', readonly=True)[0] == "OK":
+        _, data = conn.uid("search", None, "SINCE", "01-Jan-2026", "FROM", "order-update@amazon.com")
+        for uid in data[0].split():
+            _, full = conn.uid("fetch", uid.decode(), "(BODY.PEEK[])")
+            msg = email.message_from_bytes(full[0][1])
+            if "cancel" not in _h(msg["Subject"]).lower():
+                continue
+            n = re.search(r"\d{3}-\d{7}-\d{7}", _msg_text(msg))
+            if n:
+                cancelados.add(n.group(0))
+    _AMZ["cancelados"], _AMZ["cargado"] = cancelados, time.time()
+
+
+def _amz_local(when):
+    from datetime import timedelta, timezone
+    return when.astimezone(timezone(timedelta(hours=-5))).replace(tzinfo=None, microsecond=0)
+
+
+def _amz_monto(txt: str, local):
+    """('COP60,630.98' | '$14.17') -> (pesos, detalle de la conversión o '')."""
+    if txt.upper().startswith("COP"):
+        return round(_money(txt)), ""
+    return usd_a_cop(_money(txt), local)
+
+
+def parse_amazon_pedido(subject: str, text: str, when=None):
+    """Confirmación de pedido de Amazon: un gasto por pedido (sin ítems). Los pedidos cancelados no se cobran."""
+    text = re.sub(r"[\u200b-\u200f\u00ad\u034f\u2060\u2066-\u2069\ufeff\s]+", " ", text)
+    n = re.search(r"Pedido n\.?º\s*(\d{3}-\d{7}-\d{7})", text) or re.search(r"(\d{3}-\d{7}-\d{7})", text)
+    t = re.search(r"Total[^:]{0,30}:\s*(COP\s?[\d.,]+|\$\s?[\d.,]+)", text)
+    if not (n and t and when):
+        return None
+    pedido = n.group(1)
+    if pedido in _AMZ["cancelados"]:
+        return {}
+    local = _amz_local(when)
+    monto, conv = _amz_monto(t.group(1).replace(" ", ""), local)
+    desc = re.sub(r"[\u2066-\u2069]", "", subject)
+    desc = re.sub(r"^\s*Pedido:?\s*", "", desc).strip(' "“”')[:90]
+    return {"tipo": "gasto", "monto": monto, "contraparte": "Amazon", "categoria": "Compras en línea", "medio": "Otro",
+            "nota": f"Pedido {pedido}: {desc}" + (f" · {conv}" if conv else ""),
+            "ocurrido": local.isoformat(), "recurrencia": None, "proximo": None, "ref": f"amazon:{pedido}"}
+
+
+def parse_amazon_reembolso(subject: str, text: str, when=None):
+    """'Reembolso emitido': devolución recibida; entra como ingreso (Reembolsos)."""
+    text = re.sub(r"\s+", " ", text)
+    n = re.search(r"Pedido\s*#?\s*(\d{3}-\d{7}-\d{7})", text)
+    t = re.search(r"Reintegro total\s*(\$\s?[\d.,]+)", text) or re.search(r"Reembolso total[^$]{0,20}(\$\s?[\d.,]+)", text)
+    if not (n and t and when):
+        return None
+    local = _amz_local(when)
+    monto, conv = _amz_monto(t.group(1).replace(" ", ""), local)
+    return {"tipo": "ingreso", "monto": monto, "contraparte": "Amazon", "categoria": "Reembolsos", "medio": "Otro",
+            "nota": f"Reembolso del pedido {n.group(1)}" + (f" · {conv}" if conv else ""),
+            "ocurrido": local.isoformat(), "recurrencia": None, "proximo": None, "ref": f"amazon-reembolso:{n.group(1)}"}
+
+
+RECIBO_RULES += [
+    {"folder": "[Gmail]/Todos", "from": "auto-confirm@amazon.com", "imap_subject": "Pedido", "subject_has": ["pedido"], "parser": parse_amazon_pedido, "key_prefix": "amz:"},
+    {"folder": "[Gmail]/Todos", "from": "return@amazon.com", "imap_subject": "Reembolso", "subject_has": ["reembolso emitido"], "parser": parse_amazon_reembolso, "key_prefix": "amzr:"},
+]
+
+
 def _msg_text(msg) -> str:
     t = _html_text(msg)
     if t:
@@ -457,6 +535,7 @@ def fetch_recibos(user: str, password: str, seen: set, limit: int = 40):
     conn = imaplib.IMAP4_SSL(IMAP_HOST, timeout=60)
     try:
         conn.login(user, password)
+        _amazon_cancelados(conn)
         for rule in RECIBO_RULES:
             if conn.select(f'"{rule["folder"]}"', readonly=True)[0] != "OK":
                 continue
